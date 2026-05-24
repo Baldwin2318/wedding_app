@@ -1,10 +1,13 @@
+import HeartMark from './HeartMark'
+
 function Introduction({ onNext }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
       <section className="max-w-2xl text-center">
-        <h1 className="mb-4 text-5xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
-          📸 Share the Memories! 🤍
+        <h1 className="title-cursive mb-4 text-6xl text-zinc-950 sm:text-5xl">
+          📸 Share the Memories!
         </h1>
+        <HeartMark className="mx-auto mb-6 h-10 w-10" />
         <p className="mb-4 text-lg leading-8 text-zinc-700 sm:text-base">
           We’d love to see our special day through your eyes! Please upload any
           photos or videos you take during the wedding to our shared website so
@@ -21,8 +24,9 @@ function Introduction({ onNext }) {
         </p>
         <p className="mb-4 text-lg leading-8 text-zinc-700 sm:text-base">Love,</p>
         <p className="text-lg leading-8 text-zinc-700 sm:text-base">
-          Lourien &amp; Kit 🤍
+          Lourien &amp; Kit
         </p>
+        <HeartMark className="mx-auto mt-4 h-9 w-9" />
       </section>
 
       <button

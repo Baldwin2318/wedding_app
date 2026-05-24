@@ -2,16 +2,16 @@ function Guide({ onNext, onViewFeed }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
       <section className="max-w-2xl text-center">
-        <h1 className="mb-6 text-5xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
-          Guide
-        </h1>
+            {/* <h1 className="title-cursive mb-6 text-6xl text-zinc-950 sm:text-5xl">
+            Guide
+            </h1> */}
         <div className="space-y-4 text-lg leading-8 text-zinc-700 sm:text-base">
-          <p className="font-semibold text-zinc-950">Step 1</p>
-          <p>Click &quot;Take Photo&quot;</p>
-          <p className="font-semibold text-zinc-950">Step 2</p>
+          <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 1</p>
+          <p>Click &quot;📸&quot; to take a photo</p>
+          <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 2</p>
+          <p>Select "Allow" to use the camera</p>
+          <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 3</p>
           <p>Capture yourself</p>
-          <p className="font-semibold text-zinc-950">Step 3</p>
-          <p>Hit &quot;retake&quot; or &quot;done&quot;</p>
         </div>
       </section>
 
@@ -30,7 +30,7 @@ function Guide({ onNext, onViewFeed }) {
         onClick={onNext}
         aria-label="Go to camera"
       >
-        <span aria-hidden="true">📷</span>
+        <span aria-hidden="true">📸</span>
       </button>
     </section>
   )

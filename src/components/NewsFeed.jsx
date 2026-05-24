@@ -60,8 +60,8 @@ function NewsFeed({ photos = [], onAddPhoto }) {
     <section className="h-screen w-full p-6 sm:p-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col">
         <div className="flex items-center justify-between gap-4 border-b border-zinc-950 px-6 py-5 sm:flex-col sm:items-start sm:px-4 sm:py-4">
-          <h1 className="m-0 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
-            Wedding Memories 🌺
+          <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-4xl">
+            Happy Memories 🌺
           </h1>
           <button
             type="button"

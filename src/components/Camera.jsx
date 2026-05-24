@@ -165,7 +165,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
       <section className="w-full max-w-2xl text-center">
-        <h1 className="mb-6 text-5xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+        <h1 className="title-cursive mb-6 text-6xl text-zinc-950 sm:text-5xl">
           Camera
         </h1>
 
@@ -191,7 +191,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
             <p className="mx-auto flex min-h-[240px] w-full max-w-[360px] items-center justify-center rounded-[20px] border border-zinc-950 bg-stone-100 px-6 text-base text-zinc-700">
               {isOpeningCamera
                 ? 'Opening camera...'
-                : 'Tap the camera button below to start your camera.'}
+                : 'Tap "Open camera" below and allow the website permission to start your camera'}
             </p>
           )}
         </div>
