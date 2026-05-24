@@ -3,7 +3,10 @@ import Introduction from './components/Introduction'
 import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
+import { trackAppOpen } from './lib/trackAppOpen'
 import { uploadCapturedPhoto } from './lib/uploadPhoto'
+
+let hasTrackedAppOpen = false
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('introduction')
@@ -13,6 +16,18 @@ function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [currentScreen])
+
+  useEffect(() => {
+    if (hasTrackedAppOpen) {
+      return
+    }
+
+    hasTrackedAppOpen = true
+
+    trackAppOpen().catch((error) => {
+      console.error('Failed to track app open:', error)
+    })
+  }, [])
 
   function openCameraScreen() {
     setCameraSessionKey((currentKey) => currentKey + 1)

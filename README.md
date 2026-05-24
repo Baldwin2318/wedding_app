@@ -2,6 +2,8 @@
 
 This app now supports uploading captured photos to Cloudflare R2 through a server-side upload endpoint.
 
+It also supports tracking each app open into Neon Postgres by upserting one row per IP address.
+
 ## Flow
 
 1. The camera captures a photo in the browser.
@@ -22,6 +24,33 @@ Default local value:
 
 ```env
 VITE_UPLOAD_API_URL=http://127.0.0.1:8787/api/photos
+DATABASE_URL=postgresql://user:password@your-neon-host/dbname?sslmode=require
+ALLOWED_ORIGIN=http://127.0.0.1:5173
+```
+
+## Neon visitor tracking
+
+Create the table in Neon with [server/schema.sql](/Users/baldwinkielmalabanan/writable_projs_for_codex/wedding_app/wedding_app/server/schema.sql:1).
+
+Behavior:
+
+1. The frontend calls `POST /api/visitors` once when the app loads.
+2. The backend reads the device IP from the incoming request.
+3. Neon stores one row per `ip_address`.
+4. If the same IP opens the app again, `last_opened_at` is overwritten with the new timestamp.
+
+Backend entrypoint: [server/index.js](/Users/baldwinkielmalabanan/writable_projs_for_codex/wedding_app/wedding_app/server/index.js:1)
+
+Run the backend in a second terminal:
+
+```bash
+npm run dev:server
+```
+
+Then run the frontend:
+
+```bash
+npm run dev
 ```
 
 ## Cloudflare setup
