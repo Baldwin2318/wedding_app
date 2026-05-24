@@ -1,8 +1,11 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import cors from 'cors'
 import express from 'express'
+import fs from 'node:fs'
+import path from 'node:path'
 import multer from 'multer'
 import pg from 'pg'
+import { fileURLToPath } from 'node:url'
 
 const { Pool } = pg
 
@@ -15,6 +18,10 @@ const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID
 const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY
 const r2BucketName = process.env.R2_BUCKET_NAME
 const r2PublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const distDir = path.resolve(__dirname, '../dist')
+const hasBuiltFrontend = fs.existsSync(path.join(distDir, 'index.html'))
 
 if (!databaseUrl) {
   throw new Error('DATABASE_URL is required before starting the backend.')
@@ -81,6 +88,10 @@ app.use(
   }),
 )
 app.use(express.json())
+
+if (hasBuiltFrontend) {
+  app.use(express.static(distDir))
+}
 
 function getRequestIpAddress(request) {
   const forwardedFor = request.headers['x-forwarded-for']
@@ -262,6 +273,12 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     })
   }
 })
+
+if (hasBuiltFrontend) {
+  app.get(/^(?!\/api(?:\/|$)).*/, (_request, response) => {
+    response.sendFile(path.join(distDir, 'index.html'))
+  })
+}
 
 async function startServer() {
   await ensureDatabaseSchema()
