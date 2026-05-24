@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-function Camera({ isActive, onDone }) {
+function Camera({ isActive, onDone, onViewFeed }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -163,7 +163,7 @@ function Camera({ isActive, onDone }) {
   }
 
   return (
-    <section className="flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
+    <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
       <section className="w-full max-w-2xl text-center">
         <h1 className="mb-6 text-5xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
           Camera
@@ -271,6 +271,15 @@ function Camera({ isActive, onDone }) {
           </p>
         ) : null}
       </section>
+
+      <button
+        type="button"
+        className="absolute bottom-8 left-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-2xl text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:bottom-6 sm:left-6"
+        onClick={onViewFeed}
+        aria-label="Go to news feed"
+      >
+        <span aria-hidden="true">🖼️</span>
+      </button>
     </section>
   )
 }

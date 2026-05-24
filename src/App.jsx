@@ -88,6 +88,7 @@ function App() {
         key={cameraSessionKey}
         isActive={currentScreen === 'camera'}
         onDone={handleCameraDone}
+        onViewFeed={() => setCurrentScreen('feed')}
       />
     ),
     feed: <NewsFeed photos={feedPhotos} onAddPhoto={openCameraScreen} />,
