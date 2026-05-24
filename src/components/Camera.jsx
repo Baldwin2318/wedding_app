@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-function Camera() {
+function Camera({ isActive, onDone }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -13,12 +13,20 @@ function Camera() {
   const [isDone, setIsDone] = useState(false)
 
   useEffect(() => {
-    handleOpenCamera()
-
     return () => {
       stopStream()
     }
   }, [])
+
+  useEffect(() => {
+    if (isActive) {
+      handleOpenCamera()
+      return
+    }
+
+    stopStream()
+    setIsCameraActive(false)
+  }, [isActive])
 
   useEffect(() => {
     async function attachStream() {
@@ -124,29 +132,42 @@ function Camera() {
     setIsCameraActive(false)
     setIsDone(true)
     setCameraStatus('Photo confirmed. You can keep this preview or retake it.')
+
+    if (onDone && capturedPhoto) {
+      onDone({
+        image: capturedPhoto,
+        caption,
+      })
+    }
   }
 
   return (
-    <section className="page">
-      <section className="content">
-        <h1>Camera</h1>
+    <section className="flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
+      <section className="w-full max-w-2xl text-center">
+        <h1 className="mb-6 text-5xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+          Camera
+        </h1>
 
-        <div className="camera-preview">
+        <div className="mt-8">
           {capturedPhoto ? (
-            <img className="camera-feed" src={capturedPhoto} alt="Captured preview" />
+            <img
+              className="mx-auto block w-full max-w-[360px] rounded-[20px] border border-zinc-950 bg-stone-100 object-contain"
+              src={capturedPhoto}
+              alt="Captured preview"
+            />
           ) : isCameraActive ? (
             <>
               <video
                 ref={videoRef}
-                className="camera-feed"
+                className="mx-auto block w-full max-w-[360px] rounded-[20px] border border-zinc-950 bg-stone-100 object-cover"
                 autoPlay
                 muted
                 playsInline
               />
-              <canvas ref={canvasRef} className="capture-canvas" />
+              <canvas ref={canvasRef} className="hidden" />
             </>
           ) : (
-            <p className="camera-placeholder">
+            <p className="mx-auto flex min-h-[240px] w-full max-w-[360px] items-center justify-center rounded-[20px] border border-zinc-950 bg-stone-100 px-6 text-base text-zinc-700">
               {isOpeningCamera
                 ? 'Opening camera...'
                 : 'Tap the camera button below to start your camera.'}
@@ -154,17 +175,24 @@ function Camera() {
           )}
         </div>
 
-        {cameraStatus ? <p className="camera-status">{cameraStatus}</p> : null}
-        {cameraError ? <p className="camera-error">{cameraError}</p> : null}
+        {cameraStatus ? (
+          <p className="mt-4 text-base text-zinc-600">{cameraStatus}</p>
+        ) : null}
+        {cameraError ? (
+          <p className="mt-4 text-base text-red-700">{cameraError}</p>
+        ) : null}
 
         {capturedPhoto ? (
-          <div className="caption-block">
-            <label className="caption-label" htmlFor="photo-caption">
+          <div className="mx-auto mt-5 w-full max-w-[360px] text-left">
+            <label
+              className="mb-2 block text-sm font-semibold text-zinc-950"
+              htmlFor="photo-caption"
+            >
               Add a caption
             </label>
             <textarea
               id="photo-caption"
-              className="caption-input"
+              className="w-full rounded-2xl border border-zinc-950 bg-white px-3.5 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
               rows="3"
               placeholder="Write a short note about this photo..."
               value={caption}
@@ -173,9 +201,13 @@ function Camera() {
           </div>
         ) : null}
 
-        <div className="guide-actions">
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
           {isCameraActive ? (
-            <button type="button" className="action-button" onClick={handleCapture}>
+            <button
+              type="button"
+              className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+              onClick={handleCapture}
+            >
               Capture
             </button>
           ) : null}
@@ -184,12 +216,16 @@ function Camera() {
             <>
               <button
                 type="button"
-                className="action-button secondary-button"
+                className="rounded-full border border-zinc-950 bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
                 onClick={handleRetake}
               >
                 Retake
               </button>
-              <button type="button" className="action-button" onClick={handleDone}>
+              <button
+                type="button"
+                className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+                onClick={handleDone}
+              >
                 Done
               </button>
             </>
@@ -197,7 +233,7 @@ function Camera() {
         </div>
 
         {isDone ? (
-          <p className="camera-done">
+          <p className="mt-4 font-semibold text-zinc-950">
             Saved for this session{caption ? ` with caption: "${caption}"` : '.'}
           </p>
         ) : null}
