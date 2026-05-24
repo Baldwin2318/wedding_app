@@ -8,9 +8,10 @@ It also supports tracking each app open into Neon Postgres by upserting one row 
 
 1. The camera captures a photo in the browser.
 2. When the user taps `Done`, the app posts the image as `multipart/form-data` to `VITE_UPLOAD_API_URL`.
-3. A Cloudflare Worker stores the file in R2.
-4. The Worker returns a public image URL.
-5. The feed renders the R2 image URL.
+3. The Node backend uploads the file to Cloudflare R2.
+4. The backend gets the public image URL.
+5. The backend saves the URL, object key, caption, IP address, and timestamp in Neon Postgres.
+6. The feed renders the R2 image URL.
 
 ## Frontend setup
 
@@ -23,9 +24,14 @@ cp .env.example .env
 Default local value:
 
 ```env
-VITE_UPLOAD_API_URL=http://127.0.0.1:8787/api/photos
+VITE_UPLOAD_API_URL=/api/photos
 DATABASE_URL=postgresql://user:password@your-neon-host/dbname?sslmode=require
 ALLOWED_ORIGIN=http://127.0.0.1:5173
+R2_ACCOUNT_ID=your-cloudflare-account-id
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_BUCKET_NAME=your-r2-bucket-name
+R2_PUBLIC_BASE_URL=https://pub-your-public-bucket-domain.r2.dev
 ```
 
 ## Neon visitor tracking
@@ -53,45 +59,26 @@ Then run the frontend:
 npm run dev
 ```
 
-## Cloudflare setup
+## Photo capture storage flow
+
+When the user taps `Done`, the app now follows this flow:
+
+1. Upload image to Cloudflare R2.
+2. Build the public image URL.
+3. Insert a row into Neon `photo_captures`.
+4. Return the saved metadata to the frontend.
+
+Photo schema is also defined in [server/schema.sql](/Users/baldwinkielmalabanan/writable_projs_for_codex/wedding_app/wedding_app/server/schema.sql:1).
+
+## Cloudflare R2 setup
 
 1. Create an R2 bucket in Cloudflare.
 2. Make the bucket public, or attach a custom public domain.
-3. Copy [cloudflare/wrangler.toml.example](/Users/baldwinkielmalabanan/writable_projs_for_codex/wedding_app/wedding_app/cloudflare/wrangler.toml.example) to `cloudflare/wrangler.toml`.
-4. Set `bucket_name` to your bucket.
-5. Set `PUBLIC_BUCKET_BASE_URL` to the public bucket URL or custom domain.
-6. Set `ALLOWED_ORIGIN` to your frontend origin.
-
-Worker source: [cloudflare/worker.js](/Users/baldwinkielmalabanan/writable_projs_for_codex/wedding_app/wedding_app/cloudflare/worker.js)
-
-## Run locally
-
-From the `cloudflare` folder:
-
-```bash
-wrangler dev
-```
-
-Then run the Vite app:
-
-```bash
-npm run dev
-```
-
-## Deploy
-
-From the `cloudflare` folder:
-
-```bash
-wrangler deploy
-```
-
-After deploy, point the frontend to the Worker:
-
-```env
-VITE_UPLOAD_API_URL=https://your-worker-name.your-subdomain.workers.dev/api/photos
-```
+3. Create an R2 API token with object read/write permissions.
+4. Copy its access key ID and secret into `.env`.
+5. Set `R2_BUCKET_NAME`.
+6. Set `R2_PUBLIC_BASE_URL` to the bucket public URL or custom domain.
 
 ## Important
 
-Do not store R2 credentials in the Vite frontend. The browser should call the Worker only. The Worker accesses R2 through the `WEDDING_PHOTOS` binding.
+Do not store R2 credentials in the Vite frontend. The browser posts to your backend only. The backend talks to R2 and Neon.

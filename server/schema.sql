@@ -2,3 +2,12 @@ CREATE TABLE IF NOT EXISTS app_visitors (
   ip_address TEXT PRIMARY KEY,
   last_opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS photo_captures (
+  id BIGSERIAL PRIMARY KEY,
+  object_key TEXT NOT NULL UNIQUE,
+  image_url TEXT NOT NULL,
+  caption TEXT NOT NULL DEFAULT '',
+  ip_address TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -12,8 +12,10 @@
     "start:server": "node --env-file=.env server/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1053.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "multer": "^2.1.1",
     "pg": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
