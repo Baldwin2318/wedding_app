@@ -1,26 +1,36 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Introduction from './components/Introduction'
 import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
+import { uploadCapturedPhoto } from './lib/uploadPhoto'
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState('introduction')
+  const [cameraSessionKey, setCameraSessionKey] = useState(0)
   const [feedPhotos, setFeedPhotos] = useState([])
-  const screenTrackClassName = {
-    introduction: 'translate-x-0',
-    guide: '-translate-x-1/4',
-    camera: '-translate-x-2/4',
-    feed: '-translate-x-3/4',
-  }[currentScreen]
 
-  function handleCameraDone(photo) {
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [currentScreen])
+
+  function openCameraScreen() {
+    setCameraSessionKey((currentKey) => currentKey + 1)
+    setCurrentScreen('camera')
+  }
+
+  async function handleCameraDone(photo) {
     if (photo?.image) {
+      const uploadedPhoto = await uploadCapturedPhoto({
+        imageDataUrl: photo.image,
+        caption: photo.caption,
+      })
+
       setFeedPhotos((currentPhotos) => [
         {
-          id: `capture-${Date.now()}`,
-          image: photo.image,
-          caption: photo.caption || 'New wedding memory',
+          id: uploadedPhoto.key || `capture-${Date.now()}`,
+          image: uploadedPhoto.imageUrl,
+          caption: uploadedPhoto.caption || photo.caption || 'New wedding memory',
           likes: 0,
           author: 'You',
         },
@@ -31,32 +41,22 @@ function App() {
     setCurrentScreen('feed')
   }
 
+  const screens = {
+    introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
+    guide: <Guide onNext={openCameraScreen} />,
+    camera: (
+      <Camera
+        key={cameraSessionKey}
+        isActive={currentScreen === 'camera'}
+        onDone={handleCameraDone}
+      />
+    ),
+    feed: <NewsFeed photos={feedPhotos} onAddPhoto={openCameraScreen} />,
+  }
+
   return (
-    <div className="min-h-screen bg-white text-zinc-950">
-      <div className="min-h-screen">
-        <div
-          className={`flex min-h-screen w-[400%] transform transition-transform duration-500 ease-out ${screenTrackClassName}`}
-        >
-          <div className="w-1/4 shrink-0">
-            <Introduction onNext={() => setCurrentScreen('guide')} />
-          </div>
-          <div className="w-1/4 shrink-0">
-            <Guide onNext={() => setCurrentScreen('camera')} />
-          </div>
-          <div className="w-1/4 shrink-0">
-            <Camera
-              isActive={currentScreen === 'camera'}
-              onDone={handleCameraDone}
-            />
-          </div>
-          <div className="w-1/4 shrink-0">
-            <NewsFeed
-              photos={feedPhotos}
-              onAddPhoto={() => setCurrentScreen('camera')}
-            />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen overflow-x-hidden bg-white text-zinc-950">
+      <div className="min-h-screen">{screens[currentScreen]}</div>
     </div>
   )
 }

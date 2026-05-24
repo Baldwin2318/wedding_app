@@ -11,6 +11,7 @@ function Camera({ isActive, onDone }) {
   const [capturedPhoto, setCapturedPhoto] = useState('')
   const [caption, setCaption] = useState('')
   const [isDone, setIsDone] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -19,13 +20,9 @@ function Camera({ isActive, onDone }) {
   }, [])
 
   useEffect(() => {
-    if (isActive) {
-      handleOpenCamera()
-      return
+    if (!isActive) {
+      stopStream()
     }
-
-    stopStream()
-    setIsCameraActive(false)
   }, [isActive])
 
   useEffect(() => {
@@ -67,6 +64,7 @@ function Camera({ isActive, onDone }) {
       setCameraStatus('Requesting camera access...')
       setIsOpeningCamera(true)
       setIsDone(false)
+      setIsUploading(false)
       setCapturedPhoto('')
       setCaption('')
       setIsCameraActive(false)
@@ -116,6 +114,7 @@ function Camera({ isActive, onDone }) {
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.92))
     setCaption('')
+    setCameraError('')
     setCameraStatus('Photo captured. Choose Retake or Done.')
     stopStream()
     setIsCameraActive(false)
@@ -124,20 +123,42 @@ function Camera({ isActive, onDone }) {
   function handleRetake() {
     setCapturedPhoto('')
     setIsDone(false)
+    setIsUploading(false)
+    setCameraError('')
     handleOpenCamera()
   }
 
-  function handleDone() {
+  async function handleDone() {
+    if (!capturedPhoto || isUploading) {
+      return
+    }
+
     stopStream()
     setIsCameraActive(false)
-    setIsDone(true)
-    setCameraStatus('Photo confirmed. You can keep this preview or retake it.')
+    setIsUploading(true)
+    setCameraError('')
+    setCameraStatus('Uploading photo...')
 
-    if (onDone && capturedPhoto) {
-      onDone({
-        image: capturedPhoto,
-        caption,
-      })
+    try {
+      if (onDone) {
+        await onDone({
+          image: capturedPhoto,
+          caption,
+        })
+      }
+
+      setIsDone(true)
+      setCameraStatus('Photo uploaded successfully.')
+    } catch (error) {
+      setIsDone(false)
+      setCameraStatus('')
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : 'Upload failed. Please try again.',
+      )
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -207,6 +228,7 @@ function Camera({ isActive, onDone }) {
               type="button"
               className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
               onClick={handleCapture}
+              disabled={isUploading}
             >
               Capture
             </button>
@@ -218,6 +240,7 @@ function Camera({ isActive, onDone }) {
                 type="button"
                 className="rounded-full border border-zinc-950 bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
                 onClick={handleRetake}
+                disabled={isUploading}
               >
                 Retake
               </button>
@@ -225,16 +248,26 @@ function Camera({ isActive, onDone }) {
                 type="button"
                 className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
                 onClick={handleDone}
+                disabled={isUploading}
               >
-                Done
+                {isUploading ? 'Uploading...' : 'Done'}
               </button>
             </>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+              onClick={handleOpenCamera}
+              disabled={isOpeningCamera || isUploading}
+            >
+              {isOpeningCamera ? 'Opening...' : 'Open camera'}
+            </button>
+          )}
         </div>
 
         {isDone ? (
           <p className="mt-4 font-semibold text-zinc-950">
-            Saved for this session{caption ? ` with caption: "${caption}"` : '.'}
+            Saved to Cloudflare R2{caption ? ` with caption: "${caption}"` : '.'}
           </p>
         ) : null}
       </section>

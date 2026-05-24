@@ -1,0 +1,11 @@
+name = "wedding-photo-upload"
+main = "worker.js"
+compatibility_date = "2026-05-24"
+
+[[r2_buckets]]
+binding = "WEDDING_PHOTOS"
+bucket_name = "wedding_photos"
+
+[vars]
+ALLOWED_ORIGIN = "http://localhost:5173"
+PUBLIC_BUCKET_BASE_URL = "https://pub-your-public-bucket-domain.r2.dev"
