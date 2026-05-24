@@ -57,11 +57,11 @@ function NewsFeed({ photos = [], onAddPhoto }) {
   }
 
   return (
-    <section className="h-screen w-full overflow-hidden bg-stone-100 p-6 sm:p-3">
-      <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden rounded-[28px] border border-zinc-950 bg-amber-50 sm:h-[calc(100vh-1.5rem)] sm:rounded-[20px]">
+    <section className="h-screen w-full p-6 sm:p-3">
+      <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col">
         <div className="flex items-center justify-between gap-4 border-b border-zinc-950 px-6 py-5 sm:flex-col sm:items-start sm:px-4 sm:py-4">
           <h1 className="m-0 text-3xl font-semibold tracking-tight text-zinc-950 sm:text-2xl">
-            News Feed
+            Wedding Memories 🌺
           </h1>
           <button
             type="button"
@@ -73,7 +73,7 @@ function NewsFeed({ photos = [], onAddPhoto }) {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 [scrollbar-gutter:stable] sm:p-3.5">
+        <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
           {posts.map((post) => {
             const isLiked = Boolean(likedPosts[post.id])
             const likeCount = post.likes + (isLiked ? 1 : 0)

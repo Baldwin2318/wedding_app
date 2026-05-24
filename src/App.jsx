@@ -33,7 +33,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-zinc-950">
-      <div className="min-h-screen overflow-hidden">
+      <div className="min-h-screen">
         <div
           className={`flex min-h-screen w-[400%] transform transition-transform duration-500 ease-out ${screenTrackClassName}`}
         >
