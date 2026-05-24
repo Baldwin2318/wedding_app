@@ -3,6 +3,7 @@ import Introduction from './components/Introduction'
 import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
+import { fetchSavedPhotos } from './lib/fetchPhotos'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { uploadCapturedPhoto } from './lib/uploadPhoto'
 
@@ -27,6 +28,24 @@ function App() {
     trackAppOpen().catch((error) => {
       console.error('Failed to track app open:', error)
     })
+  }, [])
+
+  useEffect(() => {
+    fetchSavedPhotos()
+      .then((savedPhotos) => {
+        setFeedPhotos(
+          savedPhotos.map((photo) => ({
+            id: photo.id || photo.key,
+            image: photo.imageUrl,
+            caption: photo.caption || 'Wedding memory',
+            likes: 0,
+            author: 'Guest',
+          })),
+        )
+      })
+      .catch((error) => {
+        console.error('Failed to load saved photos:', error)
+      })
   }, [])
 
   function openCameraScreen() {

@@ -110,6 +110,14 @@ function getSafeFileExtension(filename = '', mimeType = '') {
   return 'jpg'
 }
 
+function buildPublicImageUrl(objectKey, fallbackImageUrl = '') {
+  if (r2PublicBaseUrl && objectKey) {
+    return `${r2PublicBaseUrl}/${objectKey}`
+  }
+
+  return fallbackImageUrl
+}
+
 app.get('/api/health', async (_request, response) => {
   try {
     await pool.query('SELECT 1')
@@ -119,6 +127,36 @@ app.get('/api/health', async (_request, response) => {
       ok: false,
       error:
         error instanceof Error ? error.message : 'Database health check failed.',
+    })
+  }
+})
+
+app.get('/api/photos', async (_request, response) => {
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, object_key, image_url, caption, ip_address, created_at
+        FROM photo_captures
+        ORDER BY created_at DESC
+      `,
+    )
+
+    response.status(200).json({
+      ok: true,
+      photos: result.rows.map((row) => ({
+        id: String(row.id),
+        key: row.object_key,
+        imageUrl: buildPublicImageUrl(row.object_key, row.image_url),
+        caption: row.caption,
+        ipAddress: row.ip_address,
+        createdAt: row.created_at,
+      })),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to load saved photos.',
     })
   }
 })
@@ -189,7 +227,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       }),
     )
 
-    const imageUrl = `${r2PublicBaseUrl}/${objectKey}`
+    const imageUrl = buildPublicImageUrl(objectKey)
     const result = await pool.query(
       `
         INSERT INTO photo_captures (
