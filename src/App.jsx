@@ -77,7 +77,12 @@ function App() {
 
   const screens = {
     introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
-    guide: <Guide onNext={openCameraScreen} />,
+    guide: (
+      <Guide
+        onNext={openCameraScreen}
+        onViewFeed={() => setCurrentScreen('feed')}
+      />
+    ),
     camera: (
       <Camera
         key={cameraSessionKey}
