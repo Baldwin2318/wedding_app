@@ -9,5 +9,6 @@ CREATE TABLE IF NOT EXISTS photo_captures (
   image_url TEXT NOT NULL,
   caption TEXT NOT NULL DEFAULT '',
   ip_address TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  likes_count INTEGER
 );

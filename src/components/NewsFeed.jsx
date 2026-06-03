@@ -26,36 +26,64 @@ const dummyPosts = [
     id: 'dummy-1',
     image: createPlaceholderImage('#d9736a', '#f3c17b', 'Reception Memory'),
     caption: 'A sweet table moment before the dancing started.',
-    likes: 12,
+    likesCount: 12,
     author: 'Ava',
   },
   {
     id: 'dummy-2',
     image: createPlaceholderImage('#6d8ec5', '#9dd6c8', 'Ceremony Smile'),
     caption: 'Everyone looked so happy during the ceremony.',
-    likes: 19,
+    likesCount: 19,
     author: 'Noah',
   },
   {
     id: 'dummy-3',
     image: createPlaceholderImage('#7f5f95', '#d9a7c7', 'Golden Hour'),
     caption: 'Golden hour hit perfectly for this memory.',
-    likes: 27,
+    likesCount: 27,
     author: 'Mia',
   },
 ]
 
-function NewsFeed({ photos = [], onAddPhoto, onUploadPhoto }) {
+function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
   const [likedPosts, setLikedPosts] = useState({})
+  const [likingPostIds, setLikingPostIds] = useState({})
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
   const posts = [...photos, ...dummyPosts]
 
-  function handleToggleLike(postId) {
+  function handleToggleDummyLike(postId) {
     setLikedPosts((currentLikedPosts) => ({
       ...currentLikedPosts,
       [postId]: !currentLikedPosts[postId],
     }))
+  }
+
+  async function handleLike(postId, isPersistedPhoto) {
+    if (!isPersistedPhoto || !onLikePhoto) {
+      handleToggleDummyLike(postId)
+      return
+    }
+
+    if (likingPostIds[postId]) {
+      return
+    }
+
+    try {
+      setLikingPostIds((currentIds) => ({
+        ...currentIds,
+        [postId]: true,
+      }))
+      await onLikePhoto(postId)
+    } catch (error) {
+      console.error('Failed to like photo:', error)
+    } finally {
+      setLikingPostIds((currentIds) => {
+        const nextIds = { ...currentIds }
+        delete nextIds[postId]
+        return nextIds
+      })
+    }
   }
 
   function handleOpenUploadPicker() {
@@ -85,7 +113,7 @@ function NewsFeed({ photos = [], onAddPhoto, onUploadPhoto }) {
     <section className="h-screen w-full p-6 sm:p-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col">
         <div className="flex items-center justify-between gap-4 border-b border-zinc-950 px-6 py-5 sm:flex-col sm:items-start sm:px-4 sm:py-4">
-          <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-4xl">
+          <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-2xl">
             Happy Memories 🌺
           </h1>
           <div className="flex flex-wrap items-center gap-3">
@@ -119,7 +147,11 @@ function NewsFeed({ photos = [], onAddPhoto, onUploadPhoto }) {
         <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
           {posts.map((post) => {
             const isLiked = Boolean(likedPosts[post.id])
-            const likeCount = post.likes + (isLiked ? 1 : 0)
+            const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
+            const likeCount = isPersistedPhoto
+              ? Number(post.likesCount) || 0
+              : (Number(post.likesCount) || 0) + (isLiked ? 1 : 0)
+            const showLikeCount = likeCount > 0
 
             return (
               <article
@@ -138,15 +170,16 @@ function NewsFeed({ photos = [], onAddPhoto, onUploadPhoto }) {
                     <button
                       type="button"
                       className={`inline-flex items-center gap-2 rounded-full border border-zinc-950 px-3 py-2 text-sm font-medium transition ${
-                        isLiked
+                        !isPersistedPhoto && isLiked
                           ? 'bg-zinc-950 text-white'
                           : 'bg-white text-zinc-950 hover:bg-zinc-950 hover:text-white'
                       }`}
-                      onClick={() => handleToggleLike(post.id)}
-                      aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
+                      onClick={() => handleLike(post.id, isPersistedPhoto)}
+                      aria-label="Like photo"
+                      disabled={Boolean(likingPostIds[post.id])}
                     >
                       <span aria-hidden="true">♥</span>
-                      <span>{likeCount}</span>
+                      {showLikeCount ? <span>{likeCount}</span> : null}
                     </button>
                   </div>
 

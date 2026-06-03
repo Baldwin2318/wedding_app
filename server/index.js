@@ -79,6 +79,11 @@ async function ensureDatabaseSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `)
+
+  await pool.query(`
+    ALTER TABLE photo_captures
+    ADD COLUMN IF NOT EXISTS likes_count INTEGER;
+  `)
 }
 
 app.set('trust proxy', true)
@@ -146,7 +151,7 @@ app.get('/api/photos', async (_request, response) => {
   try {
     const result = await pool.query(
       `
-        SELECT id, object_key, image_url, caption, ip_address, created_at
+        SELECT id, object_key, image_url, caption, ip_address, created_at, likes_count
         FROM photo_captures
         ORDER BY created_at DESC
       `,
@@ -159,6 +164,7 @@ app.get('/api/photos', async (_request, response) => {
         key: row.object_key,
         imageUrl: buildPublicImageUrl(row.object_key, row.image_url),
         caption: row.caption,
+        likesCount: row.likes_count,
         ipAddress: row.ip_address,
         createdAt: row.created_at,
       })),
@@ -249,7 +255,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
           created_at
         )
         VALUES ($1, $2, $3, $4, NOW())
-        RETURNING id, object_key, image_url, caption, ip_address, created_at
+        RETURNING id, object_key, image_url, caption, ip_address, created_at, likes_count
       `,
       [objectKey, imageUrl, caption, ipAddress],
     )
@@ -260,6 +266,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       key: result.rows[0].object_key,
       imageUrl: result.rows[0].image_url,
       caption: result.rows[0].caption,
+      likesCount: result.rows[0].likes_count,
       ipAddress: result.rows[0].ip_address,
       createdAt: result.rows[0].created_at,
     })
@@ -270,6 +277,42 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
         error instanceof Error
           ? error.message
           : 'Failed to upload photo and save metadata.',
+    })
+  }
+})
+
+app.post('/api/photos/:id/like', async (request, response) => {
+  const { id } = request.params
+
+  try {
+    const result = await pool.query(
+      `
+        UPDATE photo_captures
+        SET likes_count = COALESCE(likes_count, 0) + 1
+        WHERE id = $1
+        RETURNING id, likes_count
+      `,
+      [id],
+    )
+
+    if (result.rowCount === 0) {
+      response.status(404).json({
+        ok: false,
+        error: 'Photo not found.',
+      })
+      return
+    }
+
+    response.status(200).json({
+      ok: true,
+      id: String(result.rows[0].id),
+      likesCount: result.rows[0].likes_count,
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to like photo.',
     })
   }
 })

@@ -4,6 +4,7 @@ import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
 import { fetchSavedPhotos } from './lib/fetchPhotos'
+import { likePhoto } from './lib/likePhoto'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
@@ -35,10 +36,10 @@ function App() {
       .then((savedPhotos) => {
         setFeedPhotos(
           savedPhotos.map((photo) => ({
-            id: photo.id || photo.key,
+            id: String(photo.id || photo.key),
             image: photo.imageUrl,
             caption: photo.caption || 'Wedding memory',
-            likes: 0,
+            likesCount: photo.likesCount ?? null,
             author: 'Guest',
           })),
         )
@@ -62,10 +63,10 @@ function App() {
 
       setFeedPhotos((currentPhotos) => [
         {
-          id: uploadedPhoto.key || `capture-${Date.now()}`,
+          id: String(uploadedPhoto.id || uploadedPhoto.key || `capture-${Date.now()}`),
           image: uploadedPhoto.imageUrl,
           caption: uploadedPhoto.caption || photo.caption || 'New wedding memory',
-          likes: 0,
+          likesCount: uploadedPhoto.likesCount ?? null,
           author: 'You',
         },
         ...currentPhotos,
@@ -83,14 +84,29 @@ function App() {
 
     setFeedPhotos((currentPhotos) => [
       {
-        id: uploadedPhoto.key || `upload-${Date.now()}`,
+        id: String(uploadedPhoto.id || uploadedPhoto.key || `upload-${Date.now()}`),
         image: uploadedPhoto.imageUrl,
         caption: uploadedPhoto.caption || 'New wedding memory',
-        likes: 0,
+        likesCount: uploadedPhoto.likesCount ?? null,
         author: 'You',
       },
       ...currentPhotos,
     ])
+  }
+
+  async function handleLikePhoto(photoId) {
+    const likedPhoto = await likePhoto(photoId)
+
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.map((photo) =>
+        photo.id === likedPhoto.id
+          ? {
+              ...photo,
+              likesCount: likedPhoto.likesCount,
+            }
+          : photo,
+      ),
+    )
   }
 
   const screens = {
@@ -113,6 +129,7 @@ function App() {
       <NewsFeed
         photos={feedPhotos}
         onAddPhoto={openCameraScreen}
+        onLikePhoto={handleLikePhoto}
         onUploadPhoto={handleSelectedPhotoUpload}
       />
     ),
