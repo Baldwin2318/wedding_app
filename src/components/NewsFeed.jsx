@@ -240,9 +240,9 @@ function NewsFeed({
   }
 
   return (
-    <section className="h-screen w-full p-6 sm:p-3">
+    <section className="h-screen w-full px-6 py-6 sm:px-0 sm:py-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-4 sm:py-4">
+        <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
           <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-start">
           <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-2xl">
             Happy Memories 🌺
@@ -278,7 +278,7 @@ function NewsFeed({
 
         <div
           ref={scrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 px-5 py-5 [scrollbar-gutter:stable] sm:px-0 sm:py-3.5"
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
           onTouchStart={handleTouchStart}
