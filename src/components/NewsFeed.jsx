@@ -118,8 +118,9 @@ function NewsFeed({
 
   return (
     <section className="h-screen w-full p-6 sm:p-3">
-      <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col">
-        <div className="flex items-center justify-between gap-4 border-b border-zinc-950 px-6 py-5 sm:flex-col sm:items-start sm:px-4 sm:py-4">
+      <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
+        <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-4 sm:py-4">
+          <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-start">
           <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-2xl">
             Happy Memories 🌺
           </h1>
@@ -150,8 +151,9 @@ function NewsFeed({
             </button>
           </div>
         </div>
+        </div>
 
-        <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
           {pendingNewPhotoCount > 0 ? (
             <div className="mx-auto w-full max-w-[520px]">
               <button
