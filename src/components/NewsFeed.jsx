@@ -282,11 +282,11 @@ function NewsFeed({
     <section className="relative h-screen w-full px-6 py-6 sm:px-0 sm:py-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
-          <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-start">
-          <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-2xl">
+          <div className="flex items-center justify-between gap-4">
+          <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-[1.35rem]">
             Happy Memories 🌺
           </h1>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -296,7 +296,7 @@ function NewsFeed({
             />
             <button
               type="button"
-              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:px-3.5 sm:py-2.5 sm:text-xs"
               onClick={handleOpenUploadPicker}
               disabled={isUploading}
             >
@@ -305,7 +305,7 @@ function NewsFeed({
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:px-3.5 sm:py-2.5 sm:text-xs"
               onClick={onAddPhoto}
             >
               <MinimalCameraIcon className="h-4 w-4" />
