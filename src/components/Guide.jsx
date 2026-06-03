@@ -1,4 +1,5 @@
 import MinimalCameraIcon from './MinimalCameraIcon'
+import MinimalHomeIcon from './MinimalHomeIcon'
 
 function Guide({ onNext, onViewFeed }) {
   return (
@@ -26,7 +27,7 @@ function Guide({ onNext, onViewFeed }) {
         onClick={onViewFeed}
         aria-label="Go to news feed"
       >
-        <span aria-hidden="true">🖼️</span>
+        <MinimalHomeIcon className="h-6 w-6" />
       </button>
 
       <button

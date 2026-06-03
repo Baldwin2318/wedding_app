@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
+import MinimalHomeIcon from './MinimalHomeIcon'
 
 function Camera({ isActive, onDone, onViewFeed }) {
   const videoRef = useRef(null)
@@ -281,7 +282,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
           onClick={onViewFeed}
           aria-label="Go to news feed"
         >
-          <span aria-hidden="true">🖼️</span>
+          <MinimalHomeIcon className="h-6 w-6" />
         </button>
       )
     </section>
