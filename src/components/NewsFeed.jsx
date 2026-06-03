@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import MinimalCameraIcon from './MinimalCameraIcon'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -224,7 +225,7 @@ function NewsFeed({
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-4 sm:py-4">
           <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-start">
-          <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-2xl">
+          <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-2xl">
             Happy Memories 🌺
           </h1>
           <div className="flex flex-wrap items-center gap-3">
@@ -241,16 +242,16 @@ function NewsFeed({
               onClick={handleOpenUploadPicker}
               disabled={isUploading}
             >
-              <span aria-hidden="true">↑</span>
-              <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+              <span aria-hidden="true">+</span>
+              <span>{isUploading ? 'Uploading...' : 'Add photo'}</span>
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-zinc-950 px-4.5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
               onClick={onAddPhoto}
             >
-              <span aria-hidden="true">📷</span>
-              <span>Add photo</span>
+              <MinimalCameraIcon className="h-4 w-4" />
+              <span>Take picture</span>
             </button>
           </div>
         </div>

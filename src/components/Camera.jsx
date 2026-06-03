@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import MinimalCameraIcon from './MinimalCameraIcon'
 
 function Camera({ isActive, onDone, onViewFeed }) {
   const videoRef = useRef(null)
@@ -256,10 +257,11 @@ function Camera({ isActive, onDone, onViewFeed }) {
           ) : !isCameraActive ? (
             <button
               type="button"
-              className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
               onClick={handleOpenCamera}
               disabled={isOpeningCamera || isUploading}
             >
+              {!isOpeningCamera ? <MinimalCameraIcon className="h-4 w-4" /> : null}
               {isOpeningCamera ? 'Opening...' : 'Open camera'}
             </button>
           ) : null}

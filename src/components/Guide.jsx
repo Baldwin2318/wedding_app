@@ -1,3 +1,5 @@
+import MinimalCameraIcon from './MinimalCameraIcon'
+
 function Guide({ onNext, onViewFeed }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
@@ -7,7 +9,10 @@ function Guide({ onNext, onViewFeed }) {
             </h1> */}
         <div className="space-y-4 text-lg leading-8 text-zinc-700 sm:text-base">
           <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 1</p>
-          <p>Click &quot;📸&quot; to take a photo</p>
+          <p className="inline-flex items-center gap-2">
+            <MinimalCameraIcon className="h-5 w-5" />
+            <span>Click to take a photo</span>
+          </p>
           <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 2</p>
           <p>Select "Allow" to use the camera</p>
           <p className="title-cursive font-semibold text-zinc-950 text-3xl">Step 3</p>
@@ -30,7 +35,7 @@ function Guide({ onNext, onViewFeed }) {
         onClick={onNext}
         aria-label="Go to camera"
       >
-        <span aria-hidden="true">📸</span>
+        <MinimalCameraIcon className="h-6 w-6" />
       </button>
     </section>
   )
