@@ -320,7 +320,14 @@ function NewsFeed({
       isRequestingMoreRef.current = false
     }
   }, [isLoadingMorePhotos])
-
+  
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [])
+  
   return (
     <section className="app-viewport-fixed relative flex h-full w-full min-h-0 flex-col overflow-hidden bg-zinc-50">
       <input
