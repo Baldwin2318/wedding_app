@@ -24,6 +24,25 @@ function createPlaceholderImage(topColor, bottomColor, label) {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
+function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 20.5 4.9 13.9a4.78 4.78 0 0 1 0-6.8 4.71 4.71 0 0 1 6.72 0L12 7.49l.38-.39a4.71 4.71 0 0 1 6.72 0 4.78 4.78 0 0 1 0 6.8L12 20.5Z"
+        fill={isLiked ? '#dc2626' : '#ffffff'}
+        stroke={isLiked ? '#dc2626' : '#111827'}
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  )
+}
+
 const dummyPosts = [
   {
     id: 'dummy-1',
@@ -334,16 +353,12 @@ function NewsFeed({
                     <strong>{post.author}</strong>
                     <button
                       type="button"
-                      className={`inline-flex items-center gap-2 rounded-full border border-zinc-950 px-3 py-2 text-sm font-medium transition ${
-                        isLiked
-                          ? 'bg-zinc-950 text-white'
-                          : 'bg-white text-zinc-950 hover:bg-zinc-950 hover:text-white'
-                      }`}
+                      className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
                       onClick={() => handleLike(post.id, isPersistedPhoto, isLiked)}
                       aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
                       disabled={Boolean(likingPostIds[post.id])}
                     >
-                      <span aria-hidden="true">♥</span>
+                      <HeartIcon isLiked={isLiked} />
                       {showLikeCount ? <span>{likeCount}</span> : null}
                     </button>
                   </div>
