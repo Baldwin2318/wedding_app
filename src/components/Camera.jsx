@@ -257,7 +257,7 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
           Camera
         </h1>
 
-        <div className="mt-8">
+        <div>
           {capturedPhoto ? (
             <img
               className="mx-auto block w-full max-w-[360px] rounded-[20px] border border-zinc-950 bg-stone-100 object-contain"
