@@ -360,7 +360,7 @@ function NewsFeed({
 
         <div
           ref={scrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 px-5 py-5 [scrollbar-gutter:stable] sm:px-0 sm:py-3.5"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-0 px-5 pt-5 [scrollbar-gutter:stable] sm:px-0 sm:pt-3.5"
           onScroll={handleScroll}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
