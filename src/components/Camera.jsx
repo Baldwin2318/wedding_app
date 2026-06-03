@@ -241,9 +241,9 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
       })
     }, 120)
   }
-
+  
   return (
-    <section className="app-viewport keyboard-safe-bottom relative overflow-y-auto">
+    <section className="app-viewport keyboard-safe-bottom relative overflow-y-auto bg-zinc-50 px-5 py-8">
       <input
         ref={fileInputRef}
         type="file"
@@ -251,139 +251,143 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
         className="hidden"
         onChange={handleSelectedPhotoChange}
       />
-      <section className="mx-auto flex min-h-full w-full max-w-2xl items-center justify-center text-center">
-        <div className="w-full">
-        <h1 className="title-cursive mb-6 text-6xl text-zinc-950 sm:text-5xl">
-          Camera
-        </h1>
-
-        <div>
-          {capturedPhoto ? (
-            <img
-              className="mx-auto block w-full max-w-[360px] rounded-[20px] border border-zinc-950 bg-stone-100 object-contain"
-              src={capturedPhoto}
-              alt="Captured preview"
-            />
-          ) : isCameraActive ? (
-            <>
-              <video
-                ref={videoRef}
-                className="mx-auto block w-full max-w-[360px] rounded-[20px] border border-zinc-950 bg-stone-100 object-cover"
-                autoPlay
-                muted
-                playsInline
+  
+      <section className="mx-auto flex min-h-full w-full max-w-[520px] items-center justify-center text-center">
+        <div className="w-full rounded-[32px] border border-white bg-white px-5 py-7 shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
+          <h1 className="title-cursive mb-6 text-5xl text-zinc-950 sm:text-4xl">
+            Camera
+          </h1>
+  
+          <div>
+            {capturedPhoto ? (
+              <img
+                className="mx-auto block w-full max-w-[360px] rounded-[28px] border border-white bg-zinc-100 object-contain shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                src={capturedPhoto}
+                alt="Captured preview"
               />
-              <canvas ref={canvasRef} className="hidden" />
-            </>
-          ) : (
-            <p className="mx-auto flex min-h-[240px] w-full max-w-[360px] items-center justify-center rounded-[20px] border border-zinc-950 bg-stone-100 px-6 text-base text-zinc-700">
-              {isOpeningCamera
-                ? 'Opening camera...'
-                : 'Tap "Open camera" below and allow the website permission to start your camera'}
-            </p>
-          )}
-        </div>
-
-        {cameraStatus ? (
-          <p className="mt-4 text-base text-zinc-600">{cameraStatus}</p>
-        ) : null}
-        {cameraError ? (
-          <p className="mt-4 text-base text-red-700">{cameraError}</p>
-        ) : null}
-
-        {capturedPhoto ? (
-          <div className="mx-auto mt-5 w-full max-w-[360px] text-left">
-            <label
-              className="mb-2 block text-sm font-semibold text-zinc-950"
-              htmlFor="photo-caption"
-            >
-              Add a caption
-            </label>
-            <textarea
-              ref={captionFieldRef}
-              id="photo-caption"
-              className="w-full rounded-2xl border border-zinc-950 bg-white px-3.5 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
-              rows="3"
-              placeholder="Write a short note about this photo..."
-              value={caption}
-              onChange={(event) => setCaption(event.target.value)}
-              onFocus={handleCaptionFocus}
-            />
+            ) : isCameraActive ? (
+              <>
+                <video
+                  ref={videoRef}
+                  className="mx-auto block w-full max-w-[360px] rounded-[28px] border border-white bg-zinc-100 object-cover shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                  autoPlay
+                  muted
+                  playsInline
+                />
+                <canvas ref={canvasRef} className="hidden" />
+              </>
+            ) : (
+              <p className="mx-auto flex min-h-[260px] w-full max-w-[360px] items-center justify-center rounded-[28px] border border-white bg-zinc-100 px-6 text-base leading-7 text-zinc-600 shadow-inner">
+                {isOpeningCamera
+                  ? 'Opening camera...'
+                  : 'Tap Open camera below and allow camera permission'}
+              </p>
+            )}
           </div>
-        ) : null}
-
-        <div className="mt-5 flex flex-wrap justify-center gap-3">
-          {isCameraActive ? (
-            <button
-              type="button"
-              className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
-              onClick={handleCapture}
-              disabled={isUploading}
-            >
-              Capture
-            </button>
+  
+          {cameraStatus ? (
+            <p className="mt-4 text-sm text-zinc-500">{cameraStatus}</p>
           ) : null}
-
+  
+          {cameraError ? (
+            <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+              {cameraError}
+            </p>
+          ) : null}
+  
           {capturedPhoto ? (
-            <>
-              <button
-                type="button"
-                className="rounded-full border border-zinc-950 bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
-                onClick={handleRetake}
-                disabled={isUploading}
+            <div className="mx-auto mt-5 w-full max-w-[360px] text-left">
+              <label
+                className="mb-2 block text-sm font-semibold text-zinc-950"
+                htmlFor="photo-caption"
               >
-                Retake
-              </button>
-              <button
-                type="button"
-                className="rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
-                onClick={handleDone}
-                disabled={isUploading}
-              >
-                {isUploading ? 'Uploading...' : 'Done'}
-              </button>
-            </>
-          ) : !isCameraActive ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
-              onClick={handleOpenCamera}
-              disabled={isOpeningCamera || isUploading}
-            >
-              {!isOpeningCamera ? <MinimalCameraIcon className="h-4 w-4" /> : null}
-              {isOpeningCamera ? 'Opening...' : 'Open camera'}
-            </button>
+                Add a caption
+              </label>
+  
+              <textarea
+                ref={captionFieldRef}
+                id="photo-caption"
+                className="w-full rounded-3xl border border-white bg-zinc-100 px-4 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-950/10"
+                rows="3"
+                placeholder="Write a short note..."
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                onFocus={handleCaptionFocus}
+              />
+            </div>
           ) : null}
-        </div>
-
-        {isDone ? (
-          <p className="mt-4 font-semibold text-zinc-950">
-            Saved to Cloudflare R2{caption ? ` with caption: "${caption}"` : '.'}
-          </p>
-        ) : null}
+  
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            {isCameraActive ? (
+              <button
+                type="button"
+                className="rounded-full border border-zinc-950 bg-zinc-950 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition hover:scale-105 active:scale-95"
+                onClick={handleCapture}
+                disabled={isUploading}
+              >
+                Capture
+              </button>
+            ) : null}
+  
+            {capturedPhoto ? (
+              <>
+                <button
+                  type="button"
+                  className="rounded-full border border-white bg-zinc-100 px-6 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 active:scale-95"
+                  onClick={handleRetake}
+                  disabled={isUploading}
+                >
+                  Retake
+                </button>
+  
+                <button
+                  type="button"
+                  className="rounded-full border border-zinc-950 bg-zinc-950 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition hover:scale-105 active:scale-95"
+                  onClick={handleDone}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : 'Done'}
+                </button>
+              </>
+            ) : !isCameraActive ? (
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-zinc-950 px-6 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.16)] transition hover:scale-105 active:scale-95"
+                onClick={handleOpenCamera}
+                disabled={isOpeningCamera || isUploading}
+              >
+                {!isOpeningCamera ? <MinimalCameraIcon className="h-4 w-4" /> : null}
+                {isOpeningCamera ? 'Opening...' : 'Open camera'}
+              </button>
+            ) : null}
+          </div>
+  
+          {isDone ? (
+            <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              Photo uploaded successfully.
+            </p>
+          ) : null}
         </div>
       </section>
-
-        
-        <button
-          type="button"
-          className="absolute bottom-8 left-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-2xl text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:bottom-6 sm:left-6"
-          onClick={onViewFeed}
-          aria-label="Go to news feed"
-        >
-          <MinimalHomeIcon className="h-6 w-6" />
-        </button>
-
-        <button
-          type="button"
-          className="absolute right-8 bottom-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-zinc-950 transition hover:bg-zinc-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:right-6 sm:bottom-6"
-          onClick={handleOpenGalleryPicker}
-          aria-label="Upload from photos"
-          disabled={isUploading}
-        >
-          <MinimalGalleryIcon className="h-6 w-6" />
-        </button>
-      
+  
+      <button
+        type="button"
+        className="fixed bottom-6 left-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-white text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95"
+        onClick={onViewFeed}
+        aria-label="Go to news feed"
+      >
+        <MinimalHomeIcon className="h-6 w-6" />
+      </button>
+  
+      <button
+        type="button"
+        className="fixed right-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-white text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={handleOpenGalleryPicker}
+        aria-label="Upload from photos"
+        disabled={isUploading}
+      >
+        <MinimalGalleryIcon className="h-6 w-6" />
+      </button>
     </section>
   )
 }
