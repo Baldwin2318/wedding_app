@@ -206,6 +206,7 @@ function App() {
         photos={feedPhotos}
         onAddPhoto={openCameraScreen}
         onLoadNewPhotos={handleLoadNewPhotos}
+        onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
         pendingNewPhotoCount={pendingNewPhotoIds.length}
         onUploadPhoto={handleSelectedPhotoUpload}

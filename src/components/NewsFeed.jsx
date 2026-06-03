@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 
+const PULL_TO_REFRESH_THRESHOLD = 80
+
 function createPlaceholderImage(topColor, bottomColor, label) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560">
@@ -49,6 +51,7 @@ function NewsFeed({
   photos = [],
   onAddPhoto,
   onLoadNewPhotos,
+  onRefreshPhotos,
   onTogglePhotoLike,
   onUploadPhoto,
   pendingNewPhotoCount = 0,
@@ -56,7 +59,13 @@ function NewsFeed({
   const [likedPosts, setLikedPosts] = useState({})
   const [likingPostIds, setLikingPostIds] = useState({})
   const [isUploading, setIsUploading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [pullDistance, setPullDistance] = useState(0)
   const fileInputRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const touchStartYRef = useRef(null)
+  const wheelPullDistanceRef = useRef(0)
+  const wheelResetTimeoutRef = useRef(null)
   const posts = [...photos, ...dummyPosts]
 
   function handleToggleDummyLike(postId) {
@@ -116,6 +125,100 @@ function NewsFeed({
     }
   }
 
+  function isAtTop() {
+    return (scrollContainerRef.current?.scrollTop || 0) <= 0
+  }
+
+  async function triggerRefresh() {
+    if (!onRefreshPhotos || isRefreshing) {
+      setPullDistance(0)
+      return
+    }
+
+    try {
+      setIsRefreshing(true)
+      await onRefreshPhotos()
+    } catch (error) {
+      console.error('Failed to refresh feed photos:', error)
+    } finally {
+      touchStartYRef.current = null
+      wheelPullDistanceRef.current = 0
+      setPullDistance(0)
+      setIsRefreshing(false)
+    }
+  }
+
+  function handleTouchStart(event) {
+    if (!isAtTop()) {
+      touchStartYRef.current = null
+      return
+    }
+
+    touchStartYRef.current = event.touches[0]?.clientY ?? null
+  }
+
+  function handleTouchMove(event) {
+    if (touchStartYRef.current === null || !isAtTop()) {
+      return
+    }
+
+    const currentY = event.touches[0]?.clientY ?? touchStartYRef.current
+    const nextPullDistance = Math.max(0, Math.min(currentY - touchStartYRef.current, 120))
+    setPullDistance(nextPullDistance)
+  }
+
+  function handleTouchEnd() {
+    if (pullDistance >= PULL_TO_REFRESH_THRESHOLD) {
+      triggerRefresh()
+      return
+    }
+
+    touchStartYRef.current = null
+    setPullDistance(0)
+  }
+
+  function scheduleWheelReset() {
+    if (wheelResetTimeoutRef.current) {
+      clearTimeout(wheelResetTimeoutRef.current)
+    }
+
+    wheelResetTimeoutRef.current = setTimeout(() => {
+      wheelPullDistanceRef.current = 0
+      setPullDistance(0)
+    }, 120)
+  }
+
+  function handleWheel(event) {
+    if (!onRefreshPhotos || isRefreshing) {
+      return
+    }
+
+    if (!isAtTop()) {
+      wheelPullDistanceRef.current = 0
+      setPullDistance(0)
+      return
+    }
+
+    if (event.deltaY < 0) {
+      wheelPullDistanceRef.current = Math.min(
+        wheelPullDistanceRef.current + Math.abs(event.deltaY),
+        120,
+      )
+      setPullDistance(wheelPullDistanceRef.current)
+
+      if (wheelPullDistanceRef.current >= PULL_TO_REFRESH_THRESHOLD) {
+        triggerRefresh()
+        return
+      }
+
+      scheduleWheelReset()
+      return
+    }
+
+    wheelPullDistanceRef.current = 0
+    setPullDistance(0)
+  }
+
   return (
     <section className="h-screen w-full p-6 sm:p-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
@@ -153,7 +256,43 @@ function NewsFeed({
         </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
+        <div
+          ref={scrollContainerRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5"
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          onTouchStart={handleTouchStart}
+          onWheel={handleWheel}
+        >
+          {onRefreshPhotos ? (
+            <div
+              className="mx-auto flex w-full max-w-[520px] items-center justify-center overflow-hidden text-sm font-medium text-zinc-500 transition-all"
+              style={{
+                height:
+                  pullDistance > 0 || isRefreshing
+                    ? `${Math.max(pullDistance * 0.7, 28)}px`
+                    : '0px',
+                opacity: pullDistance > 0 || isRefreshing ? 1 : 0,
+              }}
+            >
+              {isRefreshing ? (
+                <span className="inline-flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950"
+                  />
+                  <span>Refreshing photos...</span>
+                </span>
+              ) : (
+                <span>
+                  {pullDistance >= PULL_TO_REFRESH_THRESHOLD
+                    ? 'Release to refresh'
+                    : 'Pull down to refresh'}
+                </span>
+              )}
+            </div>
+          ) : null}
+
           {pendingNewPhotoCount > 0 ? (
             <div className="mx-auto w-full max-w-[520px]">
               <button
