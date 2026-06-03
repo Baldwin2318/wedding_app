@@ -322,7 +322,7 @@ function NewsFeed({
   }, [isLoadingMorePhotos])
 
   return (
-    <section className="app-viewport-fixed relative flex h-full w-full min-h-0 flex-col">
+    <section className="app-viewport-fixed relative flex h-full w-full min-h-0 flex-col overflow-hidden bg-zinc-50">
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         <div className="sticky top-0 z-10 shrink-0 border-b border-zinc-200/80 bg-white/85 px-5 py-4 backdrop-blur-xl sm:px-4">
           <div className="mx-auto flex w-full max-w-[520px] items-center justify-between gap-4">
