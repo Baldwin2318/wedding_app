@@ -1,8 +1,18 @@
 export function subscribeToPhotoUpdates({
+  onPhotoCreated,
   onPhotoLikeUpdated,
   onError,
 } = {}) {
   const eventSource = new EventSource('/api/photos/stream')
+
+  eventSource.addEventListener('photo-created', (event) => {
+    try {
+      const payload = JSON.parse(event.data)
+      onPhotoCreated?.(payload)
+    } catch (error) {
+      onError?.(error)
+    }
+  })
 
   eventSource.addEventListener('photo-like-updated', (event) => {
     try {

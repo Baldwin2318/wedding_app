@@ -45,7 +45,14 @@ const dummyPosts = [
   },
 ]
 
-function NewsFeed({ photos = [], onAddPhoto, onTogglePhotoLike, onUploadPhoto }) {
+function NewsFeed({
+  photos = [],
+  onAddPhoto,
+  onLoadNewPhotos,
+  onTogglePhotoLike,
+  onUploadPhoto,
+  pendingNewPhotoCount = 0,
+}) {
   const [likedPosts, setLikedPosts] = useState({})
   const [likingPostIds, setLikingPostIds] = useState({})
   const [isUploading, setIsUploading] = useState(false)
@@ -145,6 +152,20 @@ function NewsFeed({ photos = [], onAddPhoto, onTogglePhotoLike, onUploadPhoto })
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
+          {pendingNewPhotoCount > 0 ? (
+            <div className="mx-auto w-full max-w-[520px]">
+              <button
+                type="button"
+                className="w-full rounded-full border border-zinc-950 bg-zinc-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+                onClick={onLoadNewPhotos}
+              >
+                {pendingNewPhotoCount === 1
+                  ? '1 new upload'
+                  : `${pendingNewPhotoCount}+ new uploads`}
+              </button>
+            </div>
+          ) : null}
+
           {posts.map((post) => {
             const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
             const isLiked = isPersistedPhoto

@@ -169,6 +169,18 @@ function broadcastPhotoLikeUpdate({
   }
 }
 
+function broadcastPhotoCreated({
+  photoId,
+  sourceIpAddress,
+}) {
+  for (const client of photoFeedClients) {
+    sendSseEvent(client.response, 'photo-created', {
+      id: String(photoId),
+      createdByCurrentVisitor: client.ipAddress === sourceIpAddress,
+    })
+  }
+}
+
 app.get('/api/health', async (_request, response) => {
   try {
     await pool.query('SELECT 1')
@@ -344,6 +356,11 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       likesCount: result.rows[0].likes_count,
       ipAddress: result.rows[0].ip_address,
       createdAt: result.rows[0].created_at,
+    })
+
+    broadcastPhotoCreated({
+      photoId: result.rows[0].id,
+      sourceIpAddress: ipAddress,
     })
   } catch (error) {
     response.status(500).json({

@@ -11,10 +11,22 @@ import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
 let hasTrackedAppOpen = false
 
+function mapSavedPhotoToFeedPhoto(photo) {
+  return {
+    id: String(photo.id || photo.key),
+    image: photo.imageUrl,
+    caption: photo.caption || 'Wedding memory',
+    likesCount: photo.likesCount ?? null,
+    likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
+    author: 'Guest',
+  }
+}
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState('introduction')
   const [cameraSessionKey, setCameraSessionKey] = useState(0)
   const [feedPhotos, setFeedPhotos] = useState([])
+  const [pendingNewPhotoIds, setPendingNewPhotoIds] = useState([])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -33,22 +45,25 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let isCancelled = false
+
     fetchSavedPhotos()
       .then((savedPhotos) => {
-        setFeedPhotos(
-          savedPhotos.map((photo) => ({
-            id: String(photo.id || photo.key),
-            image: photo.imageUrl,
-            caption: photo.caption || 'Wedding memory',
-            likesCount: photo.likesCount ?? null,
-            likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
-            author: 'Guest',
-          })),
-        )
+        if (isCancelled) {
+          return
+        }
+
+        setFeedPhotos(savedPhotos.map(mapSavedPhotoToFeedPhoto))
       })
       .catch((error) => {
-        console.error('Failed to load saved photos:', error)
+        if (!isCancelled) {
+          console.error('Failed to load saved photos:', error)
+        }
       })
+
+    return () => {
+      isCancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -57,6 +72,27 @@ function App() {
     }
 
     return subscribeToPhotoUpdates({
+      onPhotoCreated: (createdPhoto) => {
+        if (createdPhoto.createdByCurrentVisitor) {
+          return
+        }
+
+        setFeedPhotos((currentPhotos) => {
+          if (currentPhotos.some((photo) => photo.id === String(createdPhoto.id))) {
+            return currentPhotos
+          }
+
+          setPendingNewPhotoIds((currentIds) => {
+            if (currentIds.includes(String(createdPhoto.id))) {
+              return currentIds
+            }
+
+            return [...currentIds, String(createdPhoto.id)]
+          })
+
+          return currentPhotos
+        })
+      },
       onPhotoLikeUpdated: (updatedPhoto) => {
         setFeedPhotos((currentPhotos) =>
           currentPhotos.map((photo) =>
@@ -142,6 +178,13 @@ function App() {
     )
   }
 
+  async function handleLoadNewPhotos() {
+    const savedPhotos = await fetchSavedPhotos()
+
+    setFeedPhotos(savedPhotos.map(mapSavedPhotoToFeedPhoto))
+    setPendingNewPhotoIds([])
+  }
+
   const screens = {
     introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
     guide: (
@@ -162,7 +205,9 @@ function App() {
       <NewsFeed
         photos={feedPhotos}
         onAddPhoto={openCameraScreen}
+        onLoadNewPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
+        pendingNewPhotoCount={pendingNewPhotoIds.length}
         onUploadPhoto={handleSelectedPhotoUpload}
       />
     ),
