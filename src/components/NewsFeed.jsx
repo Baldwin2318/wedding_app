@@ -366,11 +366,11 @@ function NewsFeed({
           onTouchStart={handleTouchStart}
           onWheel={handleWheel}
         >
-          {isInitialLoadingPhotos ? (
+          {/* {isInitialLoadingPhotos ? (
             <div className="mx-auto w-full max-w-[520px] rounded-3xl border border-zinc-950 bg-white px-4 py-6 text-center text-sm text-zinc-600">
               Loading photos...
             </div>
-          ) : null}
+          ) : null} */}
 
           {onRefreshPhotos ? (
             <div
