@@ -84,6 +84,15 @@ async function ensureDatabaseSchema() {
     ALTER TABLE photo_captures
     ADD COLUMN IF NOT EXISTS likes_count INTEGER;
   `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS photo_capture_likes (
+      photo_capture_id BIGINT NOT NULL REFERENCES photo_captures(id) ON DELETE CASCADE,
+      ip_address TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (photo_capture_id, ip_address)
+    );
+  `)
 }
 
 app.set('trust proxy', true)
@@ -147,14 +156,28 @@ app.get('/api/health', async (_request, response) => {
   }
 })
 
-app.get('/api/photos', async (_request, response) => {
+app.get('/api/photos', async (request, response) => {
+  const ipAddress = getRequestIpAddress(request)
+
   try {
     const result = await pool.query(
       `
-        SELECT id, object_key, image_url, caption, ip_address, created_at, likes_count
+        SELECT
+          photo_captures.id,
+          photo_captures.object_key,
+          photo_captures.image_url,
+          photo_captures.caption,
+          photo_captures.ip_address,
+          photo_captures.created_at,
+          photo_captures.likes_count,
+          photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor
         FROM photo_captures
-        ORDER BY created_at DESC
+        LEFT JOIN photo_capture_likes
+          ON photo_capture_likes.photo_capture_id = photo_captures.id
+          AND photo_capture_likes.ip_address = $1
+        ORDER BY photo_captures.created_at DESC
       `,
+      [ipAddress],
     )
 
     response.status(200).json({
@@ -165,6 +188,7 @@ app.get('/api/photos', async (_request, response) => {
         imageUrl: buildPublicImageUrl(row.object_key, row.image_url),
         caption: row.caption,
         likesCount: row.likes_count,
+        likedByCurrentVisitor: row.liked_by_current_visitor,
         ipAddress: row.ip_address,
         createdAt: row.created_at,
       })),
@@ -283,19 +307,23 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
 
 app.post('/api/photos/:id/like', async (request, response) => {
   const { id } = request.params
+  const ipAddress = getRequestIpAddress(request)
+  const client = await pool.connect()
 
   try {
-    const result = await pool.query(
+    await client.query('BEGIN')
+    const photoResult = await client.query(
       `
-        UPDATE photo_captures
-        SET likes_count = COALESCE(likes_count, 0) + 1
+        SELECT id
+        FROM photo_captures
         WHERE id = $1
-        RETURNING id, likes_count
+        FOR UPDATE
       `,
       [id],
     )
 
-    if (result.rowCount === 0) {
+    if (photoResult.rowCount === 0) {
+      await client.query('ROLLBACK')
       response.status(404).json({
         ok: false,
         error: 'Photo not found.',
@@ -303,17 +331,109 @@ app.post('/api/photos/:id/like', async (request, response) => {
       return
     }
 
+    const result = await client.query(
+      `
+        WITH inserted_like AS (
+          INSERT INTO photo_capture_likes (photo_capture_id, ip_address)
+          VALUES ($1, $2)
+          ON CONFLICT (photo_capture_id, ip_address) DO NOTHING
+          RETURNING photo_capture_id
+        )
+        UPDATE photo_captures
+        SET likes_count = CASE
+          WHEN EXISTS (SELECT 1 FROM inserted_like)
+            THEN COALESCE(likes_count, 0) + 1
+          ELSE likes_count
+        END
+        WHERE id = $1
+        RETURNING id, likes_count
+      `,
+      [id, ipAddress],
+    )
+
+    await client.query('COMMIT')
+
     response.status(200).json({
       ok: true,
       id: String(result.rows[0].id),
       likesCount: result.rows[0].likes_count,
+      likedByCurrentVisitor: true,
     })
   } catch (error) {
+    await client.query('ROLLBACK')
     response.status(500).json({
       ok: false,
       error:
         error instanceof Error ? error.message : 'Failed to like photo.',
     })
+  } finally {
+    client.release()
+  }
+})
+
+app.delete('/api/photos/:id/like', async (request, response) => {
+  const { id } = request.params
+  const ipAddress = getRequestIpAddress(request)
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+    const photoResult = await client.query(
+      `
+        SELECT id
+        FROM photo_captures
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [id],
+    )
+
+    if (photoResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Photo not found.',
+      })
+      return
+    }
+
+    const result = await client.query(
+      `
+        WITH deleted_like AS (
+          DELETE FROM photo_capture_likes
+          WHERE photo_capture_id = $1
+            AND ip_address = $2
+          RETURNING photo_capture_id
+        )
+        UPDATE photo_captures
+        SET likes_count = CASE
+          WHEN EXISTS (SELECT 1 FROM deleted_like)
+            THEN NULLIF(GREATEST(COALESCE(likes_count, 0) - 1, 0), 0)
+          ELSE likes_count
+        END
+        WHERE id = $1
+        RETURNING id, likes_count
+      `,
+      [id, ipAddress],
+    )
+
+    await client.query('COMMIT')
+
+    response.status(200).json({
+      ok: true,
+      id: String(result.rows[0].id),
+      likesCount: result.rows[0].likes_count,
+      likedByCurrentVisitor: false,
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to unlike photo.',
+    })
+  } finally {
+    client.release()
   }
 })
 

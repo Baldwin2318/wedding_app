@@ -45,7 +45,7 @@ const dummyPosts = [
   },
 ]
 
-function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
+function NewsFeed({ photos = [], onAddPhoto, onTogglePhotoLike, onUploadPhoto }) {
   const [likedPosts, setLikedPosts] = useState({})
   const [likingPostIds, setLikingPostIds] = useState({})
   const [isUploading, setIsUploading] = useState(false)
@@ -59,8 +59,8 @@ function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
     }))
   }
 
-  async function handleLike(postId, isPersistedPhoto) {
-    if (!isPersistedPhoto || !onLikePhoto) {
+  async function handleLike(postId, isPersistedPhoto, isLiked) {
+    if (!isPersistedPhoto || !onTogglePhotoLike) {
       handleToggleDummyLike(postId)
       return
     }
@@ -74,7 +74,7 @@ function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
         ...currentIds,
         [postId]: true,
       }))
-      await onLikePhoto(postId)
+      await onTogglePhotoLike(postId, !isLiked)
     } catch (error) {
       console.error('Failed to like photo:', error)
     } finally {
@@ -146,8 +146,10 @@ function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
 
         <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">
           {posts.map((post) => {
-            const isLiked = Boolean(likedPosts[post.id])
             const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
+            const isLiked = isPersistedPhoto
+              ? Boolean(post.likedByCurrentVisitor)
+              : Boolean(likedPosts[post.id])
             const likeCount = isPersistedPhoto
               ? Number(post.likesCount) || 0
               : (Number(post.likesCount) || 0) + (isLiked ? 1 : 0)
@@ -170,12 +172,12 @@ function NewsFeed({ photos = [], onAddPhoto, onLikePhoto, onUploadPhoto }) {
                     <button
                       type="button"
                       className={`inline-flex items-center gap-2 rounded-full border border-zinc-950 px-3 py-2 text-sm font-medium transition ${
-                        !isPersistedPhoto && isLiked
+                        isLiked
                           ? 'bg-zinc-950 text-white'
                           : 'bg-white text-zinc-950 hover:bg-zinc-950 hover:text-white'
                       }`}
-                      onClick={() => handleLike(post.id, isPersistedPhoto)}
-                      aria-label="Like photo"
+                      onClick={() => handleLike(post.id, isPersistedPhoto, isLiked)}
+                      aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
                       disabled={Boolean(likingPostIds[post.id])}
                     >
                       <span aria-hidden="true">♥</span>

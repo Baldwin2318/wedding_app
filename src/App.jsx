@@ -4,8 +4,8 @@ import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
 import { fetchSavedPhotos } from './lib/fetchPhotos'
-import { likePhoto } from './lib/likePhoto'
 import { trackAppOpen } from './lib/trackAppOpen'
+import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
 let hasTrackedAppOpen = false
@@ -40,6 +40,7 @@ function App() {
             image: photo.imageUrl,
             caption: photo.caption || 'Wedding memory',
             likesCount: photo.likesCount ?? null,
+            likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
             author: 'Guest',
           })),
         )
@@ -67,6 +68,7 @@ function App() {
           image: uploadedPhoto.imageUrl,
           caption: uploadedPhoto.caption || photo.caption || 'New wedding memory',
           likesCount: uploadedPhoto.likesCount ?? null,
+          likedByCurrentVisitor: false,
           author: 'You',
         },
         ...currentPhotos,
@@ -88,14 +90,15 @@ function App() {
         image: uploadedPhoto.imageUrl,
         caption: uploadedPhoto.caption || 'New wedding memory',
         likesCount: uploadedPhoto.likesCount ?? null,
+        likedByCurrentVisitor: false,
         author: 'You',
       },
       ...currentPhotos,
     ])
   }
 
-  async function handleLikePhoto(photoId) {
-    const likedPhoto = await likePhoto(photoId)
+  async function handleTogglePhotoLike(photoId, shouldLike) {
+    const likedPhoto = await togglePhotoLike(photoId, shouldLike)
 
     setFeedPhotos((currentPhotos) =>
       currentPhotos.map((photo) =>
@@ -103,6 +106,7 @@ function App() {
           ? {
               ...photo,
               likesCount: likedPhoto.likesCount,
+              likedByCurrentVisitor: likedPhoto.likedByCurrentVisitor,
             }
           : photo,
       ),
@@ -129,7 +133,7 @@ function App() {
       <NewsFeed
         photos={feedPhotos}
         onAddPhoto={openCameraScreen}
-        onLikePhoto={handleLikePhoto}
+        onTogglePhotoLike={handleTogglePhotoLike}
         onUploadPhoto={handleSelectedPhotoUpload}
       />
     ),
