@@ -324,43 +324,38 @@ function NewsFeed({
   return (
     <section className="app-viewport-fixed relative flex h-full w-full min-h-0 flex-col">
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
-          <div className="flex items-center justify-between gap-4">
-          <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-[1.35rem]">
-            Happy Memories 🌺
-          </h1>
-          <div className="flex shrink-0 flex-col items-end justify-end gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:px-3.5 sm:py-2.5 sm:text-xs"
-              onClick={handleOpenUploadPicker}
-              disabled={isUploading}
-            >
-              <span aria-hidden="true">+</span>
-              <span>{isUploading ? 'Uploading...' : 'Add photo'}</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:px-3.5 sm:py-2.5 sm:text-xs"
-              onClick={onAddPhoto}
-            >
-              <MinimalCameraIcon className="h-4 w-4" />
-              <span>Take picture</span>
-            </button>
+        <div className="sticky top-0 z-10 shrink-0 border-b border-zinc-200/80 bg-white/85 px-5 py-4 backdrop-blur-xl sm:px-4">
+          <div className="mx-auto flex w-full max-w-[520px] items-center justify-between gap-4">
+            <h1 className="title-cursive m-0 text-2xl font-semibold text-zinc-950 sm:text-[1.35rem]">
+              Happy Memories 🌺
+            </h1>
+        
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                onClick={handleOpenUploadPicker}
+                disabled={isUploading}
+                aria-label="Add photo"
+              >
+                +
+              </button>
+        
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                onClick={onAddPhoto}
+                aria-label="Take picture"
+              >
+                <MinimalCameraIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
-        </div>
         </div>
 
         <div
           ref={scrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 px-5 pt-5 pb-6 [scrollbar-gutter:stable] sm:px-4 sm:pt-4"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 bg-zinc-50 px-5 pt-5 pb-6 [scrollbar-gutter:stable] sm:px-4 sm:pt-4"
           onScroll={handleScroll}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
