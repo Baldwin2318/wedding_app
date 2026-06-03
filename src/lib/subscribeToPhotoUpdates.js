@@ -1,9 +1,12 @@
+import { getClientId } from './clientIdentity'
+
 export function subscribeToPhotoUpdates({
   onPhotoCreated,
   onPhotoLikeUpdated,
   onError,
 } = {}) {
-  const eventSource = new EventSource('/api/photos/stream')
+  const clientId = encodeURIComponent(getClientId())
+  const eventSource = new EventSource(`/api/photos/stream?clientId=${clientId}`)
 
   eventSource.addEventListener('photo-created', (event) => {
     try {

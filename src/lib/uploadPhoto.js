@@ -1,3 +1,5 @@
+import { getClientId } from './clientIdentity'
+
 function dataUrlToFile(dataUrl, filename = `capture-${Date.now()}.jpg`) {
   const [header, base64] = dataUrl.split(',')
 
@@ -30,6 +32,9 @@ async function uploadPhotoFile({ file, caption = '' }) {
 
   const response = await fetch(endpoint, {
     method: 'POST',
+    headers: {
+      'x-client-id': getClientId(),
+    },
     body: formData,
   })
 

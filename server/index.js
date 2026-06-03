@@ -118,6 +118,22 @@ function getRequestIpAddress(request) {
   return request.ip || request.socket?.remoteAddress || 'unknown'
 }
 
+function getRequestClientId(request) {
+  const headerClientId = request.headers['x-client-id']
+
+  if (typeof headerClientId === 'string' && headerClientId.trim()) {
+    return headerClientId.trim()
+  }
+
+  const queryClientId = request.query?.clientId
+
+  if (typeof queryClientId === 'string' && queryClientId.trim()) {
+    return queryClientId.trim()
+  }
+
+  return getRequestIpAddress(request)
+}
+
 function getSafeFileExtension(filename = '', mimeType = '') {
   const extensionFromName = filename.split('.').pop()?.toLowerCase()
 
@@ -150,10 +166,10 @@ function sendSseEvent(response, eventName, payload) {
 }
 
 function broadcastPhotoLikeUpdate({
+  sourceClientId,
   photoId,
   likesCount,
   likedByCurrentVisitor,
-  sourceIpAddress,
 }) {
   for (const client of photoFeedClients) {
     const payload = {
@@ -161,7 +177,7 @@ function broadcastPhotoLikeUpdate({
       likesCount,
     }
 
-    if (client.ipAddress === sourceIpAddress) {
+    if (client.clientId === sourceClientId) {
       payload.likedByCurrentVisitor = likedByCurrentVisitor
     }
 
@@ -170,13 +186,13 @@ function broadcastPhotoLikeUpdate({
 }
 
 function broadcastPhotoCreated({
+  sourceClientId,
   photoId,
-  sourceIpAddress,
 }) {
   for (const client of photoFeedClients) {
     sendSseEvent(client.response, 'photo-created', {
       id: String(photoId),
-      createdByCurrentVisitor: client.ipAddress === sourceIpAddress,
+      createdByCurrentVisitor: client.clientId === sourceClientId,
     })
   }
 }
@@ -242,8 +258,8 @@ app.get('/api/photos', async (request, response) => {
 
 app.get('/api/photos/stream', (request, response) => {
   const client = {
+    clientId: getRequestClientId(request),
     response,
-    ipAddress: getRequestIpAddress(request),
   }
 
   response.setHeader('Content-Type', 'text/event-stream')
@@ -308,6 +324,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
   const file = request.file
   const caption =
     typeof request.body.caption === 'string' ? request.body.caption.trim() : ''
+  const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
 
   if (!file) {
@@ -359,8 +376,8 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     })
 
     broadcastPhotoCreated({
+      sourceClientId: clientId,
       photoId: result.rows[0].id,
-      sourceIpAddress: ipAddress,
     })
   } catch (error) {
     response.status(500).json({
@@ -375,6 +392,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
 
 app.post('/api/photos/:id/like', async (request, response) => {
   const { id } = request.params
+  const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
   const client = await pool.connect()
 
@@ -429,10 +447,10 @@ app.post('/api/photos/:id/like', async (request, response) => {
     })
 
     broadcastPhotoLikeUpdate({
+      sourceClientId: clientId,
       photoId: result.rows[0].id,
       likesCount: result.rows[0].likes_count,
       likedByCurrentVisitor: true,
-      sourceIpAddress: ipAddress,
     })
   } catch (error) {
     await client.query('ROLLBACK')
@@ -448,6 +466,7 @@ app.post('/api/photos/:id/like', async (request, response) => {
 
 app.delete('/api/photos/:id/like', async (request, response) => {
   const { id } = request.params
+  const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
   const client = await pool.connect()
 
@@ -502,10 +521,10 @@ app.delete('/api/photos/:id/like', async (request, response) => {
     })
 
     broadcastPhotoLikeUpdate({
+      sourceClientId: clientId,
       photoId: result.rows[0].id,
       likesCount: result.rows[0].likes_count,
       likedByCurrentVisitor: false,
-      sourceIpAddress: ipAddress,
     })
   } catch (error) {
     await client.query('ROLLBACK')
