@@ -9,10 +9,10 @@ function Introduction({ onNext }) {
         </div>
 
         <h1 className="title-cursive mb-5 text-5xl text-zinc-950 sm:text-4xl">
-          Share the Memories!
+          📸 Share the Memories!
         </h1>
 
-        <div className="space-y-4 rounded-[28px] bg-zinc-50 px-5 py-5 text-base leading-7 text-zinc-700">
+        <div className="space-y-4 rounded-[28px] px-5 py-5 text-base leading-7 text-zinc-700">
           <p>
             We’d love to see our special day through your eyes! Please upload any
             photos you take during the wedding to our shared website so
