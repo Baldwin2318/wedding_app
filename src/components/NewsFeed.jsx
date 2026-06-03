@@ -95,7 +95,8 @@ function NewsFeed({
   const touchStartYRef = useRef(null)
   const wheelPullDistanceRef = useRef(0)
   const wheelResetTimeoutRef = useRef(null)
-  const posts = [...photos, ...dummyPosts]
+//   const posts = [...photos, ...dummyPosts]
+  const posts = [...photos]
 
   useEffect(() => {
     return () => {
