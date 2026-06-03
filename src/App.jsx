@@ -10,6 +10,7 @@ import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
 let hasTrackedAppOpen = false
+const PHOTO_PAGE_SIZE = 12
 
 function mapSavedPhotoToFeedPhoto(photo) {
   return {
@@ -26,6 +27,10 @@ function App() {
   const [currentScreen, setCurrentScreen] = useState('introduction')
   const [cameraSessionKey, setCameraSessionKey] = useState(0)
   const [feedPhotos, setFeedPhotos] = useState([])
+  const [hasMoreFeedPhotos, setHasMoreFeedPhotos] = useState(true)
+  const [isInitialFeedLoading, setIsInitialFeedLoading] = useState(true)
+  const [isLoadingMoreFeedPhotos, setIsLoadingMoreFeedPhotos] = useState(false)
+  const [nextFeedOffset, setNextFeedOffset] = useState(0)
   const [pendingNewPhotoIds, setPendingNewPhotoIds] = useState([])
 
   useEffect(() => {
@@ -67,17 +72,24 @@ function App() {
   useEffect(() => {
     let isCancelled = false
 
-    fetchSavedPhotos()
-      .then((savedPhotos) => {
+    fetchSavedPhotos({ limit: PHOTO_PAGE_SIZE, offset: 0 })
+      .then((savedPhotosPayload) => {
         if (isCancelled) {
           return
         }
 
-        setFeedPhotos(savedPhotos.map(mapSavedPhotoToFeedPhoto))
+        setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
+        setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
+        setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
       })
       .catch((error) => {
         if (!isCancelled) {
           console.error('Failed to load saved photos:', error)
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsInitialFeedLoading(false)
         }
       })
 
@@ -158,6 +170,7 @@ function App() {
         },
         ...currentPhotos,
       ])
+      setNextFeedOffset((currentOffset) => currentOffset + 1)
     }
 
     setCurrentScreen('feed')
@@ -180,6 +193,7 @@ function App() {
       },
       ...currentPhotos,
     ])
+    setNextFeedOffset((currentOffset) => currentOffset + 1)
 
     setCurrentScreen('feed')
   }
@@ -201,10 +215,47 @@ function App() {
   }
 
   async function handleLoadNewPhotos() {
-    const savedPhotos = await fetchSavedPhotos()
+    try {
+      setIsInitialFeedLoading(true)
+      const savedPhotosPayload = await fetchSavedPhotos({
+        limit: PHOTO_PAGE_SIZE,
+        offset: 0,
+      })
 
-    setFeedPhotos(savedPhotos.map(mapSavedPhotoToFeedPhoto))
-    setPendingNewPhotoIds([])
+      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
+      setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
+      setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
+      setPendingNewPhotoIds([])
+    } finally {
+      setIsInitialFeedLoading(false)
+    }
+  }
+
+  async function handleLoadMorePhotos() {
+    if (isInitialFeedLoading || isLoadingMoreFeedPhotos || !hasMoreFeedPhotos) {
+      return
+    }
+
+    try {
+      setIsLoadingMoreFeedPhotos(true)
+      const savedPhotosPayload = await fetchSavedPhotos({
+        limit: PHOTO_PAGE_SIZE,
+        offset: nextFeedOffset,
+      })
+
+      setFeedPhotos((currentPhotos) => [
+        ...currentPhotos,
+        ...savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto),
+      ])
+      setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
+      setNextFeedOffset(
+        savedPhotosPayload.nextOffset || nextFeedOffset + savedPhotosPayload.photos.length,
+      )
+    } catch (error) {
+      console.error('Failed to load more photos:', error)
+    } finally {
+      setIsLoadingMoreFeedPhotos(false)
+    }
   }
 
   const screens = {
@@ -226,9 +277,13 @@ function App() {
     ),
     feed: (
       <NewsFeed
+        hasMorePhotos={hasMoreFeedPhotos}
+        isInitialLoadingPhotos={isInitialFeedLoading}
+        isLoadingMorePhotos={isLoadingMoreFeedPhotos}
         photos={feedPhotos}
         onAddPhoto={openCameraScreen}
         onLoadNewPhotos={handleLoadNewPhotos}
+        onLoadMorePhotos={handleLoadMorePhotos}
         onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
         pendingNewPhotoCount={pendingNewPhotoIds.length}

@@ -68,9 +68,13 @@ const dummyPosts = [
 ]
 
 function NewsFeed({
+  hasMorePhotos = false,
+  isInitialLoadingPhotos = false,
+  isLoadingMorePhotos = false,
   photos = [],
   onAddPhoto,
   onLoadNewPhotos,
+  onLoadMorePhotos,
   onRefreshPhotos,
   onTogglePhotoLike,
   onUploadPhoto,
@@ -86,6 +90,7 @@ function NewsFeed({
   const [selectedUploadFile, setSelectedUploadFile] = useState(null)
   const [selectedUploadPreviewUrl, setSelectedUploadPreviewUrl] = useState('')
   const fileInputRef = useRef(null)
+  const isRequestingMoreRef = useRef(false)
   const scrollContainerRef = useRef(null)
   const touchStartYRef = useRef(null)
   const wheelPullDistanceRef = useRef(0)
@@ -288,6 +293,33 @@ function NewsFeed({
     setPullDistance(0)
   }
 
+  function handleScroll(event) {
+    const element = event.currentTarget
+
+    if (
+      !hasMorePhotos ||
+      isLoadingMorePhotos ||
+      isInitialLoadingPhotos ||
+      isRequestingMoreRef.current
+    ) {
+      return
+    }
+
+    const remainingScrollDistance =
+      element.scrollHeight - element.scrollTop - element.clientHeight
+
+    if (remainingScrollDistance <= 240) {
+      isRequestingMoreRef.current = true
+      onLoadMorePhotos?.()
+    }
+  }
+
+  useEffect(() => {
+    if (!isLoadingMorePhotos) {
+      isRequestingMoreRef.current = false
+    }
+  }, [isLoadingMorePhotos])
+
   return (
     <section className="app-viewport-fixed relative w-full px-6 py-6 sm:px-0 sm:py-3">
       <div className="mx-auto flex h-[calc(var(--app-height)-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
@@ -328,11 +360,18 @@ function NewsFeed({
         <div
           ref={scrollContainerRef}
           className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 px-5 py-5 [scrollbar-gutter:stable] sm:px-0 sm:py-3.5"
+          onScroll={handleScroll}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
           onTouchStart={handleTouchStart}
           onWheel={handleWheel}
         >
+          {isInitialLoadingPhotos ? (
+            <div className="mx-auto w-full max-w-[520px] rounded-3xl border border-zinc-950 bg-white px-4 py-6 text-center text-sm text-zinc-600">
+              Loading photos...
+            </div>
+          ) : null}
+
           {onRefreshPhotos ? (
             <div
               className="mx-auto flex w-full max-w-[520px] items-center justify-center overflow-hidden text-sm font-medium text-zinc-500 transition-all"
@@ -419,6 +458,12 @@ function NewsFeed({
               </article>
             )
           })}
+
+          {isLoadingMorePhotos ? (
+            <div className="mx-auto w-full max-w-[520px] px-4 py-3 text-center text-sm text-zinc-500">
+              Loading more photos...
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -212,6 +212,8 @@ app.get('/api/health', async (_request, response) => {
 
 app.get('/api/photos', async (request, response) => {
   const ipAddress = getRequestIpAddress(request)
+  const limit = Math.min(Math.max(Number(request.query.limit) || 12, 1), 50)
+  const offset = Math.max(Number(request.query.offset) || 0, 0)
 
   try {
     const result = await pool.query(
@@ -230,13 +232,19 @@ app.get('/api/photos', async (request, response) => {
           ON photo_capture_likes.photo_capture_id = photo_captures.id
           AND photo_capture_likes.ip_address = $1
         ORDER BY photo_captures.created_at DESC
+        LIMIT $2
+        OFFSET $3
       `,
-      [ipAddress],
+      [ipAddress, limit + 1, offset],
     )
+
+    const rowsToReturn = result.rows.slice(0, limit)
 
     response.status(200).json({
       ok: true,
-      photos: result.rows.map((row) => ({
+      hasMore: result.rows.length > limit,
+      nextOffset: result.rows.length > limit ? offset + rowsToReturn.length : null,
+      photos: rowsToReturn.map((row) => ({
         id: String(row.id),
         key: row.object_key,
         imageUrl: buildPublicImageUrl(row.object_key, row.image_url),
