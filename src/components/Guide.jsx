@@ -10,7 +10,7 @@ function Guide({ onNext, onViewFeed }) {
         </h1>
 
         <div className="space-y-5 text-base leading-7 text-zinc-700">
-          <div className="rounded-3xl bg-zinc-50 px-5 py-5">
+          <div className="rounded-3xl px-5 py-5">
             <p className="title-cursive mb-2 text-3xl font-semibold text-zinc-950">
               Step 1
             </p>
@@ -20,14 +20,14 @@ function Guide({ onNext, onViewFeed }) {
             </p>
           </div>
 
-          <div className="rounded-3xl bg-zinc-50 px-5 py-5">
+          <div className="rounded-3xl px-5 py-5">
             <p className="title-cursive mb-2 text-3xl font-semibold text-zinc-950">
               Step 2
             </p>
             <p>Select “Allow” to use the camera</p>
           </div>
 
-          <div className="rounded-3xl bg-zinc-50 px-5 py-5">
+          <div className="rounded-3xl px-5 py-5">
             <p className="title-cursive mb-2 text-3xl font-semibold text-zinc-950">
               Step 3
             </p>
