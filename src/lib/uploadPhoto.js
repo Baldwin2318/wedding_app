@@ -17,15 +17,15 @@ function dataUrlToFile(dataUrl, filename = `capture-${Date.now()}.jpg`) {
   return new File([bytes], filename, { type: mimeType })
 }
 
-export async function uploadCapturedPhoto({ imageDataUrl, caption = '' }) {
-  if (!imageDataUrl) {
-    throw new Error('No photo was captured.')
+async function uploadPhotoFile({ file, caption = '' }) {
+  if (!file) {
+    throw new Error('No photo file was selected.')
   }
 
   const endpoint = import.meta.env.VITE_UPLOAD_API_URL || '/api/photos'
   const formData = new FormData()
 
-  formData.append('file', dataUrlToFile(imageDataUrl))
+  formData.append('file', file)
   formData.append('caption', caption)
 
   const response = await fetch(endpoint, {
@@ -44,4 +44,19 @@ export async function uploadCapturedPhoto({ imageDataUrl, caption = '' }) {
   }
 
   return payload
+}
+
+export async function uploadCapturedPhoto({ imageDataUrl, caption = '' }) {
+  if (!imageDataUrl) {
+    throw new Error('No photo was captured.')
+  }
+
+  return uploadPhotoFile({
+    file: dataUrlToFile(imageDataUrl),
+    caption,
+  })
+}
+
+export async function uploadSelectedPhoto({ file, caption = '' }) {
+  return uploadPhotoFile({ file, caption })
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 function createPlaceholderImage(topColor, bottomColor, label) {
   const svg = `
@@ -45,8 +45,10 @@ const dummyPosts = [
   },
 ]
 
-function NewsFeed({ photos = [], onAddPhoto }) {
+function NewsFeed({ photos = [], onAddPhoto, onUploadPhoto }) {
   const [likedPosts, setLikedPosts] = useState({})
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const posts = [...photos, ...dummyPosts]
 
   function handleToggleLike(postId) {
@@ -56,6 +58,29 @@ function NewsFeed({ photos = [], onAddPhoto }) {
     }))
   }
 
+  function handleOpenUploadPicker() {
+    fileInputRef.current?.click()
+  }
+
+  async function handleFileChange(event) {
+    const file = event.target.files?.[0]
+
+    if (!file || !onUploadPhoto || isUploading) {
+      event.target.value = ''
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      await onUploadPhoto(file)
+    } catch (error) {
+      console.error('Failed to upload selected photo:', error)
+    } finally {
+      setIsUploading(false)
+      event.target.value = ''
+    }
+  }
+
   return (
     <section className="h-screen w-full p-6 sm:p-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col">
@@ -63,14 +88,32 @@ function NewsFeed({ photos = [], onAddPhoto }) {
           <h1 className="title-cursive m-0 text-5xl text-zinc-950 sm:text-4xl">
             Happy Memories 🌺
           </h1>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-zinc-950 px-4.5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
-            onClick={onAddPhoto}
-          >
-            <span aria-hidden="true">📷</span>
-            <span>Add photo</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-white px-4.5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+              onClick={handleOpenUploadPicker}
+              disabled={isUploading}
+            >
+              <span aria-hidden="true">↑</span>
+              <span>{isUploading ? 'Uploading...' : 'Upload'}</span>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2.5 rounded-full border border-zinc-950 bg-zinc-950 px-4.5 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+              onClick={onAddPhoto}
+            >
+              <span aria-hidden="true">📷</span>
+              <span>Add photo</span>
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 p-5 [scrollbar-gutter:stable] sm:p-3.5">

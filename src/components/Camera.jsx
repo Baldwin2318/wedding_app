@@ -272,7 +272,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
         ) : null}
       </section>
 
-      {!isCameraActive ? (
+        (
         <button
           type="button"
           className="absolute bottom-8 left-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-2xl text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:bottom-6 sm:left-6"
@@ -281,7 +281,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
         >
           <span aria-hidden="true">🖼️</span>
         </button>
-      ) : null}
+      )
     </section>
   )
 }

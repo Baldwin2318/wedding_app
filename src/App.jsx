@@ -5,7 +5,7 @@ import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
 import { fetchSavedPhotos } from './lib/fetchPhotos'
 import { trackAppOpen } from './lib/trackAppOpen'
-import { uploadCapturedPhoto } from './lib/uploadPhoto'
+import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
 let hasTrackedAppOpen = false
 
@@ -75,6 +75,24 @@ function App() {
     setCurrentScreen('feed')
   }
 
+  async function handleSelectedPhotoUpload(file) {
+    const uploadedPhoto = await uploadSelectedPhoto({
+      file,
+      caption: '',
+    })
+
+    setFeedPhotos((currentPhotos) => [
+      {
+        id: uploadedPhoto.key || `upload-${Date.now()}`,
+        image: uploadedPhoto.imageUrl,
+        caption: uploadedPhoto.caption || 'New wedding memory',
+        likes: 0,
+        author: 'You',
+      },
+      ...currentPhotos,
+    ])
+  }
+
   const screens = {
     introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
     guide: (
@@ -91,7 +109,13 @@ function App() {
         onViewFeed={() => setCurrentScreen('feed')}
       />
     ),
-    feed: <NewsFeed photos={feedPhotos} onAddPhoto={openCameraScreen} />,
+    feed: (
+      <NewsFeed
+        photos={feedPhotos}
+        onAddPhoto={openCameraScreen}
+        onUploadPhoto={handleSelectedPhotoUpload}
+      />
+    ),
   }
 
   return (
