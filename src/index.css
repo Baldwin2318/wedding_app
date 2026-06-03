@@ -12,20 +12,12 @@
   --keyboard-inset: 0px;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  overflow: hidden;
-}
-
 .app-viewport {
   min-height: var(--app-height);
 }
 
 .app-viewport-fixed {
   height: var(--app-height);
-  overflow: hidden;
 }
 
 .keyboard-safe-bottom {
