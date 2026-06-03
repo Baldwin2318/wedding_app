@@ -4,6 +4,7 @@ import MinimalGalleryIcon from './MinimalGalleryIcon'
 import MinimalHomeIcon from './MinimalHomeIcon'
 
 function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
+  const captionFieldRef = useRef(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -142,6 +143,8 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
   }
 
   function handleRetake() {
+    const hadSelectedPhotoFile = Boolean(selectedPhotoFile)
+
     if (capturedPhoto.startsWith('blob:')) {
       URL.revokeObjectURL(capturedPhoto)
     }
@@ -153,6 +156,12 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
 
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+
+    if (hadSelectedPhotoFile) {
+      setCameraStatus('')
+      handleOpenGalleryPicker()
+      return
     }
 
     handleOpenCamera()
@@ -224,8 +233,17 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
     event.target.value = ''
   }
 
+  function handleCaptionFocus() {
+    setTimeout(() => {
+      captionFieldRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    }, 120)
+  }
+
   return (
-    <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
+    <section className="app-viewport keyboard-safe-bottom relative overflow-y-auto px-8 py-12 sm:px-6">
       <input
         ref={fileInputRef}
         type="file"
@@ -233,8 +251,8 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
         className="hidden"
         onChange={handleSelectedPhotoChange}
       />
-
-      <section className="w-full max-w-2xl text-center">
+      <section className="mx-auto flex min-h-full w-full max-w-2xl items-center justify-center text-center">
+        <div className="w-full">
         <h1 className="title-cursive mb-6 text-6xl text-zinc-950 sm:text-5xl">
           Camera
         </h1>
@@ -282,12 +300,14 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
               Add a caption
             </label>
             <textarea
+              ref={captionFieldRef}
               id="photo-caption"
               className="w-full rounded-2xl border border-zinc-950 bg-white px-3.5 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
               rows="3"
               placeholder="Write a short note about this photo..."
               value={caption}
               onChange={(event) => setCaption(event.target.value)}
+              onFocus={handleCaptionFocus}
             />
           </div>
         ) : null}
@@ -341,6 +361,7 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
             Saved to Cloudflare R2{caption ? ` with caption: "${caption}"` : '.'}
           </p>
         ) : null}
+        </div>
       </section>
 
         

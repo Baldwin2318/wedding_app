@@ -29,6 +29,26 @@ function App() {
   const [pendingNewPhotoIds, setPendingNewPhotoIds] = useState([])
 
   useEffect(() => {
+    function updateViewportMetrics() {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight
+      const keyboardInset = Math.max(window.innerHeight - viewportHeight, 0)
+
+      document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`)
+      document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`)
+    }
+
+    updateViewportMetrics()
+
+    window.visualViewport?.addEventListener('resize', updateViewportMetrics)
+    window.addEventListener('resize', updateViewportMetrics)
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewportMetrics)
+      window.removeEventListener('resize', updateViewportMetrics)
+    }
+  }, [])
+
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [currentScreen])
 

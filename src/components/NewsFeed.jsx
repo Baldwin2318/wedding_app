@@ -76,6 +76,7 @@ function NewsFeed({
   onUploadPhoto,
   pendingNewPhotoCount = 0,
 }) {
+  const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
   const [likingPostIds, setLikingPostIds] = useState({})
   const [isUploading, setIsUploading] = useState(false)
@@ -184,6 +185,15 @@ function NewsFeed({
     }
   }
 
+  function handleUploadCaptionFocus() {
+    setTimeout(() => {
+      uploadCaptionFieldRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    }, 120)
+  }
+
   function isAtTop() {
     return (scrollContainerRef.current?.scrollTop || 0) <= 0
   }
@@ -279,14 +289,14 @@ function NewsFeed({
   }
 
   return (
-    <section className="relative h-screen w-full px-6 py-6 sm:px-0 sm:py-3">
-      <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
+    <section className="app-viewport-fixed relative w-full px-6 py-6 sm:px-0 sm:py-3">
+      <div className="mx-auto flex h-[calc(var(--app-height)-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
           <div className="flex items-center justify-between gap-4">
           <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-[1.35rem]">
             Happy Memories 🌺
           </h1>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-2">
+          <div className="flex shrink-0 flex-col items-end justify-end gap-2 sm:flex-row sm:items-center sm:gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -413,7 +423,7 @@ function NewsFeed({
       </div>
 
       {selectedUploadFile ? (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950/40 px-4 backdrop-blur-[2px]">
+        <div className="keyboard-safe-bottom absolute inset-0 z-20 flex items-start justify-center overflow-y-auto bg-zinc-950/40 px-4 py-6 backdrop-blur-[2px] sm:items-center">
           <div className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-zinc-950 bg-white shadow-[0_24px_80px_rgba(17,24,39,0.18)]">
             {selectedUploadPreviewUrl ? (
               <img
@@ -433,12 +443,14 @@ function NewsFeed({
               </div>
 
               <textarea
+                ref={uploadCaptionFieldRef}
                 id="upload-caption"
                 className="w-full rounded-2xl border border-zinc-950 bg-white px-3.5 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
                 rows="4"
                 placeholder="Write a short note about this photo..."
                 value={selectedUploadCaption}
                 onChange={(event) => setSelectedUploadCaption(event.target.value)}
+                onFocus={handleUploadCaptionFocus}
               />
 
               <div className="flex flex-wrap justify-end gap-3">

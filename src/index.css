@@ -6,3 +6,20 @@
   font-weight: 400;
   letter-spacing: 0.02em;
 }
+
+:root {
+  --app-height: 100vh;
+  --keyboard-inset: 0px;
+}
+
+.app-viewport {
+  min-height: var(--app-height);
+}
+
+.app-viewport-fixed {
+  height: var(--app-height);
+}
+
+.keyboard-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--keyboard-inset));
+}
