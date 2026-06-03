@@ -243,7 +243,7 @@ function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
   }
 
   return (
-    <section className="app-viewport keyboard-safe-bottom relative overflow-y-auto px-8 py-12 sm:px-6">
+    <section className="app-viewport keyboard-safe-bottom relative overflow-y-auto">
       <input
         ref={fileInputRef}
         type="file"
