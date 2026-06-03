@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
@@ -81,12 +81,23 @@ function NewsFeed({
   const [isUploading, setIsUploading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
+  const [selectedUploadCaption, setSelectedUploadCaption] = useState('')
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null)
+  const [selectedUploadPreviewUrl, setSelectedUploadPreviewUrl] = useState('')
   const fileInputRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const touchStartYRef = useRef(null)
   const wheelPullDistanceRef = useRef(0)
   const wheelResetTimeoutRef = useRef(null)
   const posts = [...photos, ...dummyPosts]
+
+  useEffect(() => {
+    return () => {
+      if (selectedUploadPreviewUrl) {
+        URL.revokeObjectURL(selectedUploadPreviewUrl)
+      }
+    }
+  }, [selectedUploadPreviewUrl])
 
   function handleToggleDummyLike(postId) {
     setLikedPosts((currentLikedPosts) => ({
@@ -126,7 +137,20 @@ function NewsFeed({
     fileInputRef.current?.click()
   }
 
-  async function handleFileChange(event) {
+  function clearSelectedUpload() {
+    if (selectedUploadPreviewUrl) {
+      URL.revokeObjectURL(selectedUploadPreviewUrl)
+    }
+
+    setSelectedUploadFile(null)
+    setSelectedUploadCaption('')
+    setSelectedUploadPreviewUrl('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  function handleFileChange(event) {
     const file = event.target.files?.[0]
 
     if (!file || !onUploadPhoto || isUploading) {
@@ -134,14 +158,29 @@ function NewsFeed({
       return
     }
 
+    if (selectedUploadPreviewUrl) {
+      URL.revokeObjectURL(selectedUploadPreviewUrl)
+    }
+
+    setSelectedUploadFile(file)
+    setSelectedUploadCaption('')
+    setSelectedUploadPreviewUrl(URL.createObjectURL(file))
+    event.target.value = ''
+  }
+
+  async function handleConfirmUpload() {
+    if (!selectedUploadFile || !onUploadPhoto || isUploading) {
+      return
+    }
+
     try {
       setIsUploading(true)
-      await onUploadPhoto(file)
+      await onUploadPhoto(selectedUploadFile, selectedUploadCaption.trim())
+      clearSelectedUpload()
     } catch (error) {
       console.error('Failed to upload selected photo:', error)
     } finally {
       setIsUploading(false)
-      event.target.value = ''
     }
   }
 
@@ -240,7 +279,7 @@ function NewsFeed({
   }
 
   return (
-    <section className="h-screen w-full px-6 py-6 sm:px-0 sm:py-3">
+    <section className="relative h-screen w-full px-6 py-6 sm:px-0 sm:py-3">
       <div className="mx-auto flex h-[calc(100vh-3rem)] max-w-[780px] min-h-0 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
           <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-start">
@@ -372,6 +411,58 @@ function NewsFeed({
           })}
         </div>
       </div>
+
+      {selectedUploadFile ? (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950/40 px-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-zinc-950 bg-white shadow-[0_24px_80px_rgba(17,24,39,0.18)]">
+            {selectedUploadPreviewUrl ? (
+              <img
+                className="block max-h-[280px] w-full bg-stone-100 object-cover"
+                src={selectedUploadPreviewUrl}
+                alt="Selected upload preview"
+              />
+            ) : null}
+            <div className="space-y-4 px-4 py-4">
+              <div className="space-y-1">
+                <h2 className="text-base font-semibold text-zinc-950">
+                  Add a caption
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  Write a short note before uploading this photo.
+                </p>
+              </div>
+
+              <textarea
+                id="upload-caption"
+                className="w-full rounded-2xl border border-zinc-950 bg-white px-3.5 py-3 text-base text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+                rows="4"
+                placeholder="Write a short note about this photo..."
+                value={selectedUploadCaption}
+                onChange={(event) => setSelectedUploadCaption(event.target.value)}
+              />
+
+              <div className="flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  className="rounded-full border border-zinc-950 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-zinc-950 hover:text-white"
+                  onClick={clearSelectedUpload}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-zinc-950 bg-zinc-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
+                  onClick={handleConfirmUpload}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Uploading...' : 'Upload photo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

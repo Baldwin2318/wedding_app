@@ -143,10 +143,10 @@ function App() {
     setCurrentScreen('feed')
   }
 
-  async function handleSelectedPhotoUpload(file) {
+  async function handleSelectedPhotoUpload(file, caption = '') {
     const uploadedPhoto = await uploadSelectedPhoto({
       file,
-      caption: '',
+      caption,
     })
 
     setFeedPhotos((currentPhotos) => [
@@ -160,6 +160,8 @@ function App() {
       },
       ...currentPhotos,
     ])
+
+    setCurrentScreen('feed')
   }
 
   async function handleTogglePhotoLike(photoId, shouldLike) {
@@ -198,6 +200,7 @@ function App() {
         key={cameraSessionKey}
         isActive={currentScreen === 'camera'}
         onDone={handleCameraDone}
+        onUploadPhoto={handleSelectedPhotoUpload}
         onViewFeed={() => setCurrentScreen('feed')}
       />
     ),

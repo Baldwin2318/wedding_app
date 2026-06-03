@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
+import MinimalGalleryIcon from './MinimalGalleryIcon'
 import MinimalHomeIcon from './MinimalHomeIcon'
 
-function Camera({ isActive, onDone, onViewFeed }) {
+function Camera({ isActive, onDone, onUploadPhoto, onViewFeed }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
+  const fileInputRef = useRef(null)
   const [cameraError, setCameraError] = useState('')
   const [cameraStatus, setCameraStatus] = useState('')
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [isOpeningCamera, setIsOpeningCamera] = useState(false)
   const [capturedPhoto, setCapturedPhoto] = useState('')
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null)
   const [caption, setCaption] = useState('')
   const [isDone, setIsDone] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -26,6 +29,14 @@ function Camera({ isActive, onDone, onViewFeed }) {
       stopStream()
     }
   }, [isActive])
+
+  useEffect(() => {
+    return () => {
+      if (capturedPhoto.startsWith('blob:')) {
+        URL.revokeObjectURL(capturedPhoto)
+      }
+    }
+  }, [capturedPhoto])
 
   useEffect(() => {
     async function attachStream() {
@@ -67,7 +78,11 @@ function Camera({ isActive, onDone, onViewFeed }) {
       setIsOpeningCamera(true)
       setIsDone(false)
       setIsUploading(false)
+      if (capturedPhoto.startsWith('blob:')) {
+        URL.revokeObjectURL(capturedPhoto)
+      }
       setCapturedPhoto('')
+      setSelectedPhotoFile(null)
       setCaption('')
       setIsCameraActive(false)
 
@@ -114,7 +129,11 @@ function Camera({ isActive, onDone, onViewFeed }) {
     }
 
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    if (capturedPhoto.startsWith('blob:')) {
+      URL.revokeObjectURL(capturedPhoto)
+    }
     setCapturedPhoto(canvas.toDataURL('image/jpeg', 0.92))
+    setSelectedPhotoFile(null)
     setCaption('')
     setCameraError('')
     setCameraStatus('Photo captured. Choose Retake or Done.')
@@ -123,10 +142,19 @@ function Camera({ isActive, onDone, onViewFeed }) {
   }
 
   function handleRetake() {
+    if (capturedPhoto.startsWith('blob:')) {
+      URL.revokeObjectURL(capturedPhoto)
+    }
     setCapturedPhoto('')
+    setSelectedPhotoFile(null)
     setIsDone(false)
     setIsUploading(false)
     setCameraError('')
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+
     handleOpenCamera()
   }
 
@@ -142,7 +170,9 @@ function Camera({ isActive, onDone, onViewFeed }) {
     setCameraStatus('Uploading photo...')
 
     try {
-      if (onDone) {
+      if (selectedPhotoFile && onUploadPhoto) {
+        await onUploadPhoto(selectedPhotoFile, caption)
+      } else if (onDone) {
         await onDone({
           image: capturedPhoto,
           caption,
@@ -164,8 +194,46 @@ function Camera({ isActive, onDone, onViewFeed }) {
     }
   }
 
+  function handleOpenGalleryPicker() {
+    if (isUploading) {
+      return
+    }
+
+    fileInputRef.current?.click()
+  }
+
+  async function handleSelectedPhotoChange(event) {
+    const file = event.target.files?.[0]
+
+    if (!file || !onUploadPhoto || isUploading) {
+      event.target.value = ''
+      return
+    }
+
+    stopStream()
+    setIsCameraActive(false)
+    if (capturedPhoto.startsWith('blob:')) {
+      URL.revokeObjectURL(capturedPhoto)
+    }
+    setCapturedPhoto(URL.createObjectURL(file))
+    setSelectedPhotoFile(file)
+    setCaption('')
+    setIsDone(false)
+    setCameraError('')
+    setCameraStatus('Photo selected. Add a caption or tap Done.')
+    event.target.value = ''
+  }
+
   return (
     <section className="relative flex min-h-screen items-center justify-center px-8 py-12 sm:px-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSelectedPhotoChange}
+      />
+
       <section className="w-full max-w-2xl text-center">
         <h1 className="title-cursive mb-6 text-6xl text-zinc-950 sm:text-5xl">
           Camera
@@ -275,7 +343,7 @@ function Camera({ isActive, onDone, onViewFeed }) {
         ) : null}
       </section>
 
-        (
+        
         <button
           type="button"
           className="absolute bottom-8 left-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-2xl text-zinc-950 transition hover:bg-zinc-950 hover:text-white sm:bottom-6 sm:left-6"
@@ -284,7 +352,17 @@ function Camera({ isActive, onDone, onViewFeed }) {
         >
           <MinimalHomeIcon className="h-6 w-6" />
         </button>
-      )
+
+        <button
+          type="button"
+          className="absolute right-8 bottom-8 inline-flex h-14 w-14 items-center justify-center rounded-full border border-zinc-950 bg-white text-zinc-950 transition hover:bg-zinc-950 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:right-6 sm:bottom-6"
+          onClick={handleOpenGalleryPicker}
+          aria-label="Upload from photos"
+          disabled={isUploading}
+        >
+          <MinimalGalleryIcon className="h-6 w-6" />
+        </button>
+      
     </section>
   )
 }
