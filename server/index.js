@@ -60,6 +60,7 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024,
   },
 })
+const photoFeedClients = new Set()
 
 async function ensureDatabaseSchema() {
   await pool.query(`
@@ -143,6 +144,31 @@ function buildPublicImageUrl(objectKey, fallbackImageUrl = '') {
   return fallbackImageUrl
 }
 
+function sendSseEvent(response, eventName, payload) {
+  response.write(`event: ${eventName}\n`)
+  response.write(`data: ${JSON.stringify(payload)}\n\n`)
+}
+
+function broadcastPhotoLikeUpdate({
+  photoId,
+  likesCount,
+  likedByCurrentVisitor,
+  sourceIpAddress,
+}) {
+  for (const client of photoFeedClients) {
+    const payload = {
+      id: String(photoId),
+      likesCount,
+    }
+
+    if (client.ipAddress === sourceIpAddress) {
+      payload.likedByCurrentVisitor = likedByCurrentVisitor
+    }
+
+    sendSseEvent(client.response, 'photo-like-updated', payload)
+  }
+}
+
 app.get('/api/health', async (_request, response) => {
   try {
     await pool.query('SELECT 1')
@@ -200,6 +226,31 @@ app.get('/api/photos', async (request, response) => {
         error instanceof Error ? error.message : 'Failed to load saved photos.',
     })
   }
+})
+
+app.get('/api/photos/stream', (request, response) => {
+  const client = {
+    response,
+    ipAddress: getRequestIpAddress(request),
+  }
+
+  response.setHeader('Content-Type', 'text/event-stream')
+  response.setHeader('Cache-Control', 'no-cache, no-transform')
+  response.setHeader('Connection', 'keep-alive')
+  response.flushHeaders?.()
+
+  photoFeedClients.add(client)
+  sendSseEvent(response, 'connected', { ok: true })
+
+  const keepAlive = setInterval(() => {
+    sendSseEvent(response, 'ping', {})
+  }, 25000)
+
+  request.on('close', () => {
+    clearInterval(keepAlive)
+    photoFeedClients.delete(client)
+    response.end()
+  })
 })
 
 app.post('/api/visitors', async (request, response) => {
@@ -359,6 +410,13 @@ app.post('/api/photos/:id/like', async (request, response) => {
       likesCount: result.rows[0].likes_count,
       likedByCurrentVisitor: true,
     })
+
+    broadcastPhotoLikeUpdate({
+      photoId: result.rows[0].id,
+      likesCount: result.rows[0].likes_count,
+      likedByCurrentVisitor: true,
+      sourceIpAddress: ipAddress,
+    })
   } catch (error) {
     await client.query('ROLLBACK')
     response.status(500).json({
@@ -424,6 +482,13 @@ app.delete('/api/photos/:id/like', async (request, response) => {
       id: String(result.rows[0].id),
       likesCount: result.rows[0].likes_count,
       likedByCurrentVisitor: false,
+    })
+
+    broadcastPhotoLikeUpdate({
+      photoId: result.rows[0].id,
+      likesCount: result.rows[0].likes_count,
+      likedByCurrentVisitor: false,
+      sourceIpAddress: ipAddress,
     })
   } catch (error) {
     await client.query('ROLLBACK')

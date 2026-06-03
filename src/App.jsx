@@ -4,6 +4,7 @@ import Guide from './components/Guide'
 import Camera from './components/Camera'
 import NewsFeed from './components/NewsFeed'
 import { fetchSavedPhotos } from './lib/fetchPhotos'
+import { subscribeToPhotoUpdates } from './lib/subscribeToPhotoUpdates'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
@@ -49,6 +50,34 @@ function App() {
         console.error('Failed to load saved photos:', error)
       })
   }, [])
+
+  useEffect(() => {
+    if (currentScreen !== 'feed') {
+      return undefined
+    }
+
+    return subscribeToPhotoUpdates({
+      onPhotoLikeUpdated: (updatedPhoto) => {
+        setFeedPhotos((currentPhotos) =>
+          currentPhotos.map((photo) =>
+            photo.id === String(updatedPhoto.id)
+              ? {
+                  ...photo,
+                  likesCount: updatedPhoto.likesCount ?? null,
+                  likedByCurrentVisitor:
+                    typeof updatedPhoto.likedByCurrentVisitor === 'boolean'
+                      ? updatedPhoto.likedByCurrentVisitor
+                      : photo.likedByCurrentVisitor,
+                }
+              : photo,
+          ),
+        )
+      },
+      onError: (error) => {
+        console.error('Photo updates stream error:', error)
+      },
+    })
+  }, [currentScreen])
 
   function openCameraScreen() {
     setCameraSessionKey((currentKey) => currentKey + 1)
