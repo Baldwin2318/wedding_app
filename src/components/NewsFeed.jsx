@@ -322,8 +322,8 @@ function NewsFeed({
   }, [isLoadingMorePhotos])
 
   return (
-    <section className="app-viewport-fixed relative w-full">
-      <div className="flex min-h-0 flex-col overflow-hidden">
+    <section className="app-viewport-fixed relative flex h-full w-full min-h-0 flex-col">
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-zinc-950 bg-white px-6 py-5 sm:px-0 sm:py-4">
           <div className="flex items-center justify-between gap-4">
           <h1 className="title-cursive m-0 text-2xl text-zinc-950 sm:text-[1.35rem]">
@@ -360,7 +360,7 @@ function NewsFeed({
 
         <div
           ref={scrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-0 px-5 pt-5 [scrollbar-gutter:stable] sm:px-0 sm:pt-3.5"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 px-5 pt-5 pb-6 [scrollbar-gutter:stable] sm:px-4 sm:pt-4"
           onScroll={handleScroll}
           onTouchEnd={handleTouchEnd}
           onTouchMove={handleTouchMove}
@@ -427,10 +427,10 @@ function NewsFeed({
             const showLikeCount = likeCount > 0
 
             return (
-              <article
-                key={post.id}
-                className="mx-auto w-full max-w-[520px] overflow-hidden rounded-3xl border border-zinc-950 bg-white"
-              >
+                <article
+                  key={post.id}
+                  className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
+                >
                 <img
                   className="block w-full bg-stone-200"
                   src={post.image}
