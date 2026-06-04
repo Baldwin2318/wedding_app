@@ -491,9 +491,15 @@ function NewsFeed({
                   className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
                 >
                 <img
-                  className="block w-full bg-stone-200"
+                  className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
                   src={post.image}
-                  alt={post.caption}
+                  alt={post.caption ?? "Wedding photo"}
+                  onClick={() =>
+                    setSelectedPhoto({
+                      src: post.image,
+                      alt: post.caption ?? "Wedding photo",
+                    })
+                  }
                 />
 
                 <div className="px-[18px] pt-4 pb-[18px]">
