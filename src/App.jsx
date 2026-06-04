@@ -312,9 +312,15 @@ function App() {
       window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
       setIsPhotoRestricted(false)
       setShowAccessTip(false)
-  
-      pendingRestrictedAction?.()
+      
+      const actionToRun = pendingRestrictedAction
+    
+      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
+      setIsPhotoRestricted(false)
+      setShowAccessTip(false)
       setPendingRestrictedAction(null)
+      
+      actionToRun?.()
     } catch (error) {
       console.error('Failed to verify access code:', error)
       setAccessCodeError(
