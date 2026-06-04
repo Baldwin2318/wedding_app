@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
 import HeartMark from './HeartMark'
+import { useState } from "react";
+import PhotoViewer from "./PhotoViewer";
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -105,6 +107,7 @@ function NewsFeed({
 //   const posts = [...photos, ...dummyPosts]
   const posts = [...photos]
   const [optimisticLikes, setOptimisticLikes] = useState({})
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -582,6 +585,11 @@ function NewsFeed({
           </div>
         </div>
       ) : null}
+
+      <PhotoViewer
+        photo={selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+      />
     </section>
   )
 }
