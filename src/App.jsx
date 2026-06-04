@@ -353,13 +353,19 @@ function App() {
         isInitialLoadingPhotos={isInitialFeedLoading}
         isLoadingMorePhotos={isLoadingMoreFeedPhotos}
         photos={feedPhotos}
-        onAddPhoto={openCameraScreen}
+        onAddPhoto={() => requestPhotoAccess(openCameraScreen)}
         onLoadNewPhotos={handleLoadNewPhotos}
         onLoadMorePhotos={handleLoadMorePhotos}
         onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
         pendingNewPhotoCount={pendingNewPhotoIds.length}
         onUploadPhoto={handleSelectedPhotoUpload}
+        requestPhotoAccess={requestPhotoAccess}
+        showAccessTip={showAccessTip}
+        accessCodeError={accessCodeError}
+        isVerifyingAccessCode={isVerifyingAccessCode}
+        onAccessClick={handleAccessClick}
+        onCloseAccessTip={() => setShowAccessTip(false)}
       />
     ),
   }
