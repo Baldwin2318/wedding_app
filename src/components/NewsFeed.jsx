@@ -426,6 +426,7 @@ function NewsFeed({
           ) : null}
 
           {posts.map((post) => {
+            const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
             const optimisticLike = optimisticLikes[post.id]
             
             const baseIsLiked = isPersistedPhoto
