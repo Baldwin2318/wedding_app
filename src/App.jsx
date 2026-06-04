@@ -154,8 +154,52 @@ function App() {
   }, [currentScreen])
 
   useEffect(() => {
-    const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
-    setIsPhotoRestricted(!savedCode)
+    let isCancelled = false
+  
+    async function verifySavedAccessCode() {
+      const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
+  
+      if (!savedCode?.trim()) {
+        setIsPhotoRestricted(true)
+        return
+      }
+  
+      try {
+        const response = await fetch('/api/access-codes/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ code: savedCode.trim() }),
+        })
+  
+        const payload = await response.json()
+  
+        if (isCancelled) {
+          return
+        }
+  
+        if (!response.ok || !payload.ok || !payload.valid) {
+          window.localStorage.removeItem(PHOTO_ACCESS_STORAGE_KEY)
+          setIsPhotoRestricted(true)
+          return
+        }
+  
+        setIsPhotoRestricted(false)
+      } catch (error) {
+        console.error('Failed to verify saved access code:', error)
+  
+        if (!isCancelled) {
+          setIsPhotoRestricted(true)
+        }
+      }
+    }
+  
+    verifySavedAccessCode()
+  
+    return () => {
+      isCancelled = true
+    }
   }, [])
   
   function openCameraScreen() {
