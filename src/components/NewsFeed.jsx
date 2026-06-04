@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
+import HeartMark from './HeartMark'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
