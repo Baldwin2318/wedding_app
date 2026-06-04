@@ -308,10 +308,6 @@ function App() {
         setAccessCodeError('Invalid access code.')
         return
       }
-  
-      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
-      setIsPhotoRestricted(false)
-      setShowAccessTip(false)
       
       const actionToRun = pendingRestrictedAction
     
