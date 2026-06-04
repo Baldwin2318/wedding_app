@@ -470,7 +470,7 @@ function NewsFeed({
             </div>
           ) : null}
 
-          <footer className="mx-auto mt-8 mb-6 max-w-[520px] px-6 text-center>
+          <footer className="mx-auto mt-8 mb-6 max-w-[520px] px-6 text-center">
             <HeartMark className="h-8 w-8" />
             <p className="text-sm text-zinc-500 italic">
               Made with love by Baldwin for Nicole Lourien,
