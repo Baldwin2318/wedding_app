@@ -98,6 +98,7 @@ function NewsFeed({
   const wheelResetTimeoutRef = useRef(null)
 //   const posts = [...photos, ...dummyPosts]
   const posts = [...photos]
+  const [optimisticLikes, setOptimisticLikes] = useState({})
 
   useEffect(() => {
     return () => {
@@ -114,30 +115,34 @@ function NewsFeed({
     }))
   }
 
-  async function handleLike(postId, isPersistedPhoto, isLiked) {
+  async function handleLike(postId, isPersistedPhoto, currentIsLiked, currentLikeCount) {
+    const nextIsLiked = !currentIsLiked
+    const nextLikeCount = Math.max(0, currentLikeCount + (nextIsLiked ? 1 : -1))
+  
+    setOptimisticLikes((current) => ({
+      ...current,
+      [postId]: {
+        isLiked: nextIsLiked,
+        likesCount: nextLikeCount,
+      },
+    }))
+  
     if (!isPersistedPhoto || !onTogglePhotoLike) {
-      handleToggleDummyLike(postId)
       return
     }
-
-    if (likingPostIds[postId]) {
-      return
-    }
-
+  
     try {
-      setLikingPostIds((currentIds) => ({
-        ...currentIds,
-        [postId]: true,
-      }))
-      await onTogglePhotoLike(postId, !isLiked)
+      await onTogglePhotoLike(postId, nextIsLiked)
     } catch (error) {
       console.error('Failed to like photo:', error)
-    } finally {
-      setLikingPostIds((currentIds) => {
-        const nextIds = { ...currentIds }
-        delete nextIds[postId]
-        return nextIds
-      })
+  
+      setOptimisticLikes((current) => ({
+        ...current,
+        [postId]: {
+          isLiked: currentIsLiked,
+          likesCount: currentLikeCount,
+        },
+      }))
     }
   }
 
@@ -421,13 +426,16 @@ function NewsFeed({
           ) : null}
 
           {posts.map((post) => {
-            const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
-            const isLiked = isPersistedPhoto
+            const optimisticLike = optimisticLikes[post.id]
+            
+            const baseIsLiked = isPersistedPhoto
               ? Boolean(post.likedByCurrentVisitor)
-              : Boolean(likedPosts[post.id])
-            const likeCount = isPersistedPhoto
-              ? Number(post.likesCount) || 0
-              : (Number(post.likesCount) || 0) + (isLiked ? 1 : 0)
+              : false
+            
+            const baseLikeCount = Number(post.likesCount) || 0
+            
+            const isLiked = optimisticLike?.isLiked ?? baseIsLiked
+            const likeCount = optimisticLike?.likesCount ?? baseLikeCount
             const showLikeCount = likeCount > 0
 
             return (
@@ -447,9 +455,8 @@ function NewsFeed({
                     <button
                       type="button"
                       className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
-                      onClick={() => handleLike(post.id, isPersistedPhoto, isLiked)}
+                      onClick={() => handleLike(post.id, isPersistedPhoto, isLiked, likeCount)}
                       aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
-                      disabled={Boolean(likingPostIds[post.id])}
                     >
                       <HeartIcon isLiked={isLiked} />
                       {showLikeCount ? <span>{likeCount}</span> : null}
