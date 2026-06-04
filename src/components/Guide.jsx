@@ -1,7 +1,15 @@
 import MinimalCameraIcon from './MinimalCameraIcon'
 import MinimalHomeIcon from './MinimalHomeIcon'
 
-function Guide({ onNext, onViewFeed }) {
+function Guide({
+  onNext,
+  onViewFeed,
+  showAccessTip = false,
+  accessCodeError = '',
+  isVerifyingAccessCode = false,
+  onAccessClick,
+  onCloseAccessTip,
+}) {
   return (
     <section className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12">
       <section className="w-full max-w-[520px] rounded-[32px] border border-white bg-white px-6 py-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.08)]">
@@ -51,6 +59,40 @@ function Guide({ onNext, onViewFeed }) {
         onClick={onNext}
         aria-label="Go to camera"
       >
+        
+      {showAccessTip ? (
+        <div className="absolute right-6 bottom-24 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-left text-sm shadow-xl">
+          <p className="mb-3 text-zinc-700">
+            Taking pictures is restricted.
+          </p>
+      
+          {accessCodeError ? (
+            <p className="mb-3 text-xs font-medium text-red-600">
+              {accessCodeError}
+            </p>
+          ) : null}
+      
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="rounded-full px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100"
+              onClick={onCloseAccessTip}
+            >
+              Cancel
+            </button>
+      
+            <button
+              type="button"
+              className="rounded-full bg-zinc-950 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onAccessClick}
+              disabled={isVerifyingAccessCode}
+            >
+              {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+        
         <MinimalCameraIcon className="h-6 w-6" />
       </button>
     </section>
