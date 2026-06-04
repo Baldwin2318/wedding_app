@@ -546,6 +546,41 @@ app.delete('/api/photos/:id/like', async (request, response) => {
   }
 })
 
+app.post('/api/access-codes/verify', async (request, response) => {//bmm
+  const code = typeof request.body?.code === 'string' ? request.body.code.trim() : ''
+
+  if (!code) {
+    response.status(400).json({
+      ok: false,
+      error: 'Access code is required.',
+    })
+    return
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT id
+        FROM codes
+        WHERE code = $1
+        LIMIT 1
+      `,
+      [code],
+    )
+
+    response.status(200).json({
+      ok: true,
+      valid: result.rowCount > 0,
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to verify access code.',
+    })
+  }
+})
+
 if (hasBuiltFrontend) {
   app.get(/^(?!\/api(?:\/|$)).*/, (_request, response) => {
     response.sendFile(path.join(distDir, 'index.html'))
