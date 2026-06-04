@@ -3,7 +3,6 @@ import MinimalCameraIcon from './MinimalCameraIcon'
 import HeartMark from './HeartMark'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
-const PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
 
 function createPlaceholderImage(topColor, bottomColor, label) {
   const svg = `
@@ -81,6 +80,12 @@ function NewsFeed({
   onTogglePhotoLike,
   onUploadPhoto,
   pendingNewPhotoCount = 0,
+  requestPhotoAccess,
+  showAccessTip = false,
+  accessCodeError = '',
+  isVerifyingAccessCode = false,
+  onAccessClick,
+  onCloseAccessTip,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -100,10 +105,6 @@ function NewsFeed({
 //   const posts = [...photos, ...dummyPosts]
   const posts = [...photos]
   const [optimisticLikes, setOptimisticLikes] = useState({})
-  const [isPhotoRestricted, setIsPhotoRestricted] = useState(true)
-  const [showAccessTip, setShowAccessTip] = useState(false)
-  const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false)
-  const [accessCodeError, setAccessCodeError] = useState('')
 
   useEffect(() => {
     return () => {
@@ -113,11 +114,6 @@ function NewsFeed({
     }
   }, [selectedUploadPreviewUrl])
 
-  useEffect(() => {
-    const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
-    setIsPhotoRestricted(!savedCode)
-  }, [])
-  
   function handleToggleDummyLike(postId) {
     setLikedPosts((currentLikedPosts) => ({
       ...currentLikedPosts,
@@ -156,64 +152,12 @@ function NewsFeed({
     }
   }
 
-  function requestPhotoAccess(action) {
-  if (isPhotoRestricted) {
-    setShowAccessTip(true)
-    return
-  }
-
-    action()
-  }
-
   function handleOpenUploadPicker() {
     requestPhotoAccess(() => fileInputRef.current?.click())
   }
 
   function handleOpenCamera() {
-    requestPhotoAccess(() => onAddPhoto?.())
-  }
-  
-  async function handleAccessClick() {
-    const code = window.prompt('Enter the access code')
-  
-    if (!code?.trim()) {
-      return
-    }
-  
-    try {
-      setIsVerifyingAccessCode(true)
-      setAccessCodeError('')
-  
-      const response = await fetch('/api/access-codes/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code: code.trim() }),
-      })
-  
-      const payload = await response.json()
-  
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.error || 'Failed to verify access code.')
-      }
-  
-      if (!payload.valid) {
-        setAccessCodeError('Invalid access code.')
-        return
-      }
-  
-      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
-      setIsPhotoRestricted(false)
-      setShowAccessTip(false)
-    } catch (error) {
-      console.error('Failed to verify access code:', error)
-      setAccessCodeError(
-        error instanceof Error ? error.message : 'Failed to verify access code.',
-      )
-    } finally {
-      setIsVerifyingAccessCode(false)
-    }
+    onAddPhoto?.()
   }
 
   function clearSelectedUpload() {
@@ -447,7 +391,7 @@ function NewsFeed({
                 <button
                   type="button"
                   className="rounded-full px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100"
-                  onClick={() => setShowAccessTip(false)}
+                  onClick={onCloseAccessTip}
                 >
                   Cancel
                 </button>
