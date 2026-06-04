@@ -11,6 +11,7 @@ import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 
 let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
+const PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
 
 function mapSavedPhotoToFeedPhoto(photo) {
   return {
@@ -32,6 +33,11 @@ function App() {
   const [isLoadingMoreFeedPhotos, setIsLoadingMoreFeedPhotos] = useState(false)
   const [nextFeedOffset, setNextFeedOffset] = useState(0)
   const [pendingNewPhotoIds, setPendingNewPhotoIds] = useState([])
+  const [isPhotoRestricted, setIsPhotoRestricted] = useState(true)
+  const [showAccessTip, setShowAccessTip] = useState(false)
+  const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false)
+  const [accessCodeError, setAccessCodeError] = useState('')
+  const [pendingRestrictedAction, setPendingRestrictedAction] = useState(null)
 
   useEffect(() => {
     function updateViewportMetrics() {
@@ -147,6 +153,11 @@ function App() {
     })
   }, [currentScreen])
 
+  useEffect(() => {
+    const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
+    setIsPhotoRestricted(!savedCode)
+  }, [])
+  
   function openCameraScreen() {
     setCameraSessionKey((currentKey) => currentKey + 1)
     setCurrentScreen('camera')
@@ -258,12 +269,73 @@ function App() {
     }
   }
 
+  function requestPhotoAccess(action) {
+    if (isPhotoRestricted) {
+      setPendingRestrictedAction(() => action)
+      setShowAccessTip(true)
+      return
+    }
+  
+    action()
+  }
+  
+  async function handleAccessClick() {
+    const code = window.prompt('Enter the access code')
+  
+    if (!code?.trim()) {
+      return
+    }
+  
+    try {
+      setIsVerifyingAccessCode(true)
+      setAccessCodeError('')
+  
+      const response = await fetch('/api/access-codes/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+  
+      const payload = await response.json()
+  
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || 'Failed to verify access code.')
+      }
+  
+      if (!payload.valid) {
+        setAccessCodeError('Invalid access code.')
+        return
+      }
+  
+      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
+      setIsPhotoRestricted(false)
+      setShowAccessTip(false)
+  
+      pendingRestrictedAction?.()
+      setPendingRestrictedAction(null)
+    } catch (error) {
+      console.error('Failed to verify access code:', error)
+      setAccessCodeError(
+        error instanceof Error ? error.message : 'Failed to verify access code.',
+      )
+    } finally {
+      setIsVerifyingAccessCode(false)
+    }
+  }
+  
   const screens = {
     introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
     guide: (
-      <Guide
-        onNext={openCameraScreen}
+      <Guide  
+        onNext={() => requestPhotoAccess(openCameraScreen)}
         onViewFeed={() => setCurrentScreen('feed')}
+        showAccessTip={showAccessTip}
+        accessCodeError={accessCodeError}
+        isVerifyingAccessCode={isVerifyingAccessCode}
+        onAccessClick={handleAccessClick}
+        onCloseAccessTip={() => setShowAccessTip(false)}
       />
     ),
     camera: (
