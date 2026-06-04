@@ -464,6 +464,7 @@ function NewsFeed({
             </div>
           ) : null}
         </div>
+       </div>
 
         <div
           ref={scrollContainerRef}
