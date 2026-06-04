@@ -399,7 +399,7 @@ function NewsFeed({
                 <button
                   type="button"
                   className="rounded-full bg-zinc-950 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={handleAccessClick}
+                  onClick={onAccessClick}
                   disabled={isVerifyingAccessCode}
                 >
                   {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
