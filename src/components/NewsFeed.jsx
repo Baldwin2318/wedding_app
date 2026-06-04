@@ -3,6 +3,7 @@ import MinimalCameraIcon from './MinimalCameraIcon'
 import HeartMark from './HeartMark'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
+const PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
 
 function createPlaceholderImage(topColor, bottomColor, label) {
   const svg = `
@@ -99,6 +100,10 @@ function NewsFeed({
 //   const posts = [...photos, ...dummyPosts]
   const posts = [...photos]
   const [optimisticLikes, setOptimisticLikes] = useState({})
+  const [isPhotoRestricted, setIsPhotoRestricted] = useState(true)
+  const [showAccessTip, setShowAccessTip] = useState(false)
+  const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false)
+  const [accessCodeError, setAccessCodeError] = useState('')
 
   useEffect(() => {
     return () => {
@@ -108,6 +113,11 @@ function NewsFeed({
     }
   }, [selectedUploadPreviewUrl])
 
+  useEffect(() => {
+    const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
+    setIsPhotoRestricted(!savedCode)
+  }, [])
+  
   function handleToggleDummyLike(postId) {
     setLikedPosts((currentLikedPosts) => ({
       ...currentLikedPosts,
@@ -146,8 +156,64 @@ function NewsFeed({
     }
   }
 
+  function requestPhotoAccess(action) {
+  if (isPhotoRestricted) {
+    setShowAccessTip(true)
+    return
+  }
+
+    action()
+  }
+
   function handleOpenUploadPicker() {
-    fileInputRef.current?.click()
+    requestPhotoAccess(() => fileInputRef.current?.click())
+  }
+
+  function handleOpenCamera() {
+    requestPhotoAccess(() => onAddPhoto?.())
+  }
+  
+  async function handleAccessClick() {
+    const code = window.prompt('Enter the access code')
+  
+    if (!code?.trim()) {
+      return
+    }
+  
+    try {
+      setIsVerifyingAccessCode(true)
+      setAccessCodeError('')
+  
+      const response = await fetch('/api/access-codes/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+  
+      const payload = await response.json()
+  
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || 'Failed to verify access code.')
+      }
+  
+      if (!payload.valid) {
+        setAccessCodeError('Invalid access code.')
+        return
+      }
+  
+      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
+      setIsPhotoRestricted(false)
+      setShowAccessTip(false)
+    } catch (error) {
+      console.error('Failed to verify access code:', error)
+      setAccessCodeError(
+        error instanceof Error ? error.message : 'Failed to verify access code.',
+      )
+    } finally {
+      setIsVerifyingAccessCode(false)
+    }
   }
 
   function clearSelectedUpload() {
@@ -338,33 +404,65 @@ function NewsFeed({
       />
       
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="top-0 z-10 shrink-0 border-b border-zinc-200/80 bg-white/85 px-5 py-4 backdrop-blur-xl sm:px-4">
-          <div className="mx-auto flex w-full max-w-[520px] items-center justify-between gap-4">
-            <h1 className="title-cursive m-0 text-2xl font-semibold text-zinc-950 sm:text-[1.35rem]">
-              Happy Memories 🌺
-            </h1>
-        
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
-                onClick={handleOpenUploadPicker}
-                disabled={isUploading}
-                aria-label="Add photo"
-              >
-                +
-              </button>
-        
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
-                onClick={onAddPhoto}
-                aria-label="Take picture"
-              >
-                <MinimalCameraIcon className="h-5 w-5" />
-              </button>
-            </div>
+       <div className="top-0 z-10 shrink-0 border-b border-zinc-200/80 bg-white/85 px-5 py-4 backdrop-blur-xl sm:px-4">
+        <div className="relative mx-auto flex w-full max-w-[520px] items-center justify-between gap-4">
+          <h1 className="title-cursive m-0 text-2xl font-semibold text-zinc-950 sm:text-[1.35rem]">
+            Happy Memories 🌺
+          </h1>
+    
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+              onClick={handleOpenUploadPicker}
+              disabled={isUploading}
+              aria-label="Add photo"
+            >
+              +
+            </button>
+    
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+              onClick={handleOpenCamera}
+              aria-label="Take picture"
+            >
+              <MinimalCameraIcon className="h-5 w-5" />
+            </button>
           </div>
+    
+          {showAccessTip ? (
+            <div className="absolute right-0 top-14 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-sm shadow-xl">
+              <p className="mb-3 text-zinc-700">
+                Uploading and taking pictures are restricted.
+              </p>
+    
+              {accessCodeError ? (
+                <p className="mb-3 text-xs font-medium text-red-600">
+                  {accessCodeError}
+                </p>
+              ) : null}
+    
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100"
+                  onClick={() => setShowAccessTip(false)}
+                >
+                  Cancel
+                </button>
+    
+                <button
+                  type="button"
+                  className="rounded-full bg-zinc-950 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={handleAccessClick}
+                  disabled={isVerifyingAccessCode}
+                >
+                  {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div
