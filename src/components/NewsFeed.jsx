@@ -472,8 +472,7 @@ function NewsFeed({
 
           <footer className="mx-auto mt-8 mb-6 max-w-[520px] px-6 text-center">
             <p className="text-sm text-zinc-500 italic">
-              Made with <HeartMark className="h-5 w-5" /> by Baldwin for Nicole Lourien,
-              to preserve the beautiful memories of their special day.
+              Developed by Baldwin
             </p>
           </footer>
         </div>
