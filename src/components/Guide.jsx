@@ -53,13 +53,6 @@ function Guide({
         <MinimalHomeIcon className="h-6 w-6" />
       </button>
 
-      <button
-        type="button"
-        className="absolute right-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-zinc-950 text-white shadow-[0_8px_30px_rgba(0,0,0,0.14)] transition hover:scale-105 hover:bg-zinc-800 active:scale-95"
-        onClick={onNext}
-        aria-label="Go to camera"
-      >
-        
       {showAccessTip ? (
         <div className="absolute right-6 bottom-24 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-left text-sm shadow-xl">
           <p className="mb-3 text-zinc-700">
@@ -92,7 +85,13 @@ function Guide({
           </div>
         </div>
       ) : null}
-        
+      
+      <button
+        type="button"
+        className="absolute right-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-zinc-950 text-white shadow-[0_8px_30px_rgba(0,0,0,0.14)] transition hover:scale-105 hover:bg-zinc-800 active:scale-95"
+        onClick={onNext}
+        aria-label="Go to camera"
+      >
         <MinimalCameraIcon className="h-6 w-6" />
       </button>
     </section>
