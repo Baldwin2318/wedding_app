@@ -373,6 +373,7 @@ app.get('/api/photos', async (request, response) => {
           photo_captures.caption,
           photo_captures.ip_address,
           photo_captures.uploader_name,
+          profiles.url_profile_pic,
           photo_captures.created_at,
           photo_captures.likes_count,
           photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor
@@ -380,6 +381,9 @@ app.get('/api/photos', async (request, response) => {
         LEFT JOIN photo_capture_likes
           ON photo_capture_likes.photo_capture_id = photo_captures.id
           AND photo_capture_likes.visitor_identity = $1
+        LEFT JOIN profiles
+          ON photo_captures.visitor_identity LIKE 'code:%'
+          AND profiles.uuid = SUBSTRING(photo_captures.visitor_identity FROM 6)
         ORDER BY photo_captures.created_at DESC
         LIMIT $2
         OFFSET $3
@@ -402,6 +406,7 @@ app.get('/api/photos', async (request, response) => {
         likedByCurrentVisitor: row.liked_by_current_visitor,
         ipAddress: row.ip_address,
         uploaderName: row.uploader_name,
+        profileImageUrl: row.url_profile_pic,
         createdAt: row.created_at,
       })),
     })
@@ -502,12 +507,15 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     const extension = getSafeFileExtension(file.originalname, file.mimetype)
     const objectKey = `wedding-photos/${Date.now()}-${crypto.randomUUID()}.${extension}`
     let uploaderName = 'Guest'
+    let profileImageUrl = null
 
     if (accessCodeUuid) {
       const codeResult = await pool.query(
         `
-          SELECT code
+          SELECT codes.code, profiles.url_profile_pic
           FROM codes
+          LEFT JOIN profiles
+            ON profiles.uuid = codes.uuid
           WHERE uuid = $1
           LIMIT 1
         `,
@@ -516,6 +524,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
 
       if (codeResult.rowCount > 0) {
         uploaderName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+        profileImageUrl = codeResult.rows[0].url_profile_pic || null
       }
     }
 
@@ -555,6 +564,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       likesCount: result.rows[0].likes_count,
       ipAddress: result.rows[0].ip_address,
       uploaderName: result.rows[0].uploader_name,
+      profileImageUrl,
       createdAt: result.rows[0].created_at,
     })
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import MinimalCameraIcon from './MinimalCameraIcon'
 import HeartMark from './HeartMark'
-import PhotoViewer from "./PhotoViewer";
+import PhotoViewer from './PhotoViewer'
+import ProfileAvatar from './ProfileAvatar'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -106,7 +107,7 @@ function NewsFeed({
 //   const posts = [...photos, ...dummyPosts]
   const posts = [...photos]
   const [optimisticLikes, setOptimisticLikes] = useState({})
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState(null)
 
   useEffect(() => {
     return () => {
@@ -496,14 +497,24 @@ function NewsFeed({
                   onClick={() =>
                     setSelectedPhoto({
                       src: post.image,
-                      alt: post.caption ?? "Wedding photo",
+                      alt: post.caption ?? 'Wedding photo',
                     })
                   }
                 />
 
                 <div className="px-[18px] pt-4 pb-[18px]">
                   <div className="flex items-center justify-between gap-3">
-                    <strong>{post.author}</strong>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <ProfileAvatar
+                        src={post.profileImage || post.profilePhoto || post.avatar}
+                        name={post.author}
+                      />
+                      <div className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-zinc-950">
+                          {post.author}
+                        </span>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"

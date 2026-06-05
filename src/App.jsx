@@ -26,6 +26,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     likesCount: photo.likesCount ?? null,
     likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
     author: photo.uploaderName || 'Guest',
+    profileImage: photo.profileImageUrl || '',
   }
 }
 
@@ -235,6 +236,7 @@ function App() {
           likesCount: uploadedPhoto.likesCount ?? null,
           likedByCurrentVisitor: false,
           author: uploadedPhoto.uploaderName || 'Guest',
+          profileImage: uploadedPhoto.profileImageUrl || '',
         },
         ...currentPhotos,
       ])
@@ -258,6 +260,7 @@ function App() {
         likesCount: uploadedPhoto.likesCount ?? null,
         likedByCurrentVisitor: false,
         author: uploadedPhoto.uploaderName || 'Guest',
+        profileImage: uploadedPhoto.profileImageUrl || '',
       },
       ...currentPhotos,
     ])
