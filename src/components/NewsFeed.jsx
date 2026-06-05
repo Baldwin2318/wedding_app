@@ -1162,6 +1162,9 @@ function NewsFeed({
       
           handleLike(photo.id, true, isLiked, likeCount)
         }}
+        canDeletePhoto={Boolean(onDeletePhoto)}
+        isDeletingPhoto={Boolean(deletingPostIds[selectedPhoto?.id])}
+        onDeleteClick={handleDeletePost}
       />
     </section>
   )
