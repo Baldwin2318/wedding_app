@@ -140,6 +140,7 @@ function NewsFeed({
   const profileHistoryDisposeRef = useRef(null)
   const photoHistoryDisposeRef = useRef(null)
   const profileSettingsHistoryDisposeRef = useRef(null)
+  const commentsHistoryDisposeRef = useRef(null)
   const [commentSheetPost, setCommentSheetPost] = useState(null)
   const [commentsByPhotoId, setCommentsByPhotoId] = useState({})
   const [isLoadingComments, setIsLoadingComments] = useState(false)
@@ -218,6 +219,17 @@ function NewsFeed({
     }
 
     setSelectedPhoto(null)
+  }
+  
+  function closeCommentsSheet() {
+    if (commentsHistoryDisposeRef.current) {
+      const dispose = commentsHistoryDisposeRef.current
+      commentsHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+  
+    setCommentSheetPost(null)
   }
 
   function closeSelectedProfile() {
@@ -615,6 +627,20 @@ function NewsFeed({
         : currentPhoto,
     )
   }, [photos, selectedPhoto?.id])
+  
+  useEffect(() => {
+    if (commentSheetPost && !commentsHistoryDisposeRef.current) {
+      commentsHistoryDisposeRef.current = pushView('comments-sheet', () => {
+        commentsHistoryDisposeRef.current = null
+        setCommentSheetPost(null)
+      })
+      return
+    }
+  
+    if (!commentSheetPost) {
+      commentsHistoryDisposeRef.current = null
+    }
+  }, [commentSheetPost, pushView])
   
   async function handleSaveProfile({ name, file }) {
     try {
@@ -1021,7 +1047,7 @@ function NewsFeed({
         error={commentsError}
         canComment={canLikePhotos}
         currentProfile={currentProfile}
-        onClose={() => setCommentSheetPost(null)}
+        onClose={closeCommentsSheet}
         onSubmit={handleSubmitComment}
         onEdit={handleEditComment}
         onDelete={handleDeleteComment}
