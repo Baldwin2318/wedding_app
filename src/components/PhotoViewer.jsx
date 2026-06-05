@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import CommentIcon from './CommentIcon'
 
 function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
@@ -23,10 +23,15 @@ function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
 export default function PhotoViewer({
   photo,
   canLikePhotos = false,
+  canDeletePhoto = false,
+  isDeletingPhoto = false,
   onClose,
   onCommentClick,
   onLikeClick,
+  onDeleteClick,
 }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
   useEffect(() => {
     if (!photo) return
 
@@ -43,6 +48,10 @@ export default function PhotoViewer({
     }
   }, [photo, onClose])
 
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [photo?.id])
+
   if (!photo) return null
 
   const isLiked = Boolean(photo.likedByCurrentVisitor)
@@ -54,14 +63,47 @@ export default function PhotoViewer({
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4"
       onClick={onClose}
     >
-      <button
-        type="button"
-        aria-label="Close photo viewer"
-        onClick={onClose}
-        className="fixed right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-3xl leading-none text-white backdrop-blur-md active:scale-95"
-      >
-        ×
-      </button>
+      <div className="fixed right-4 top-4 z-10 flex items-center gap-2">
+        {canDeletePhoto ? (
+          <div className="relative" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              aria-label="Open photo actions"
+              aria-expanded={isMenuOpen}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-2xl leading-none text-white backdrop-blur-md active:scale-95 disabled:opacity-45"
+              disabled={isDeletingPhoto}
+              onClick={() => setIsMenuOpen((current) => !current)}
+            >
+              ⋯
+            </button>
+
+            {isMenuOpen ? (
+              <div className="absolute right-0 top-13 min-w-[160px] overflow-hidden rounded-2xl border border-white/10 bg-white text-sm shadow-[0_18px_45px_rgba(0,0,0,0.35)]">
+                <button
+                  type="button"
+                  className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isDeletingPhoto}
+                  onClick={() => {
+                    setIsMenuOpen(false)
+                    onDeleteClick?.(photo)
+                  }}
+                >
+                  {isDeletingPhoto ? 'Deleting...' : 'Delete photo'}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          aria-label="Close photo viewer"
+          onClick={onClose}
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-3xl leading-none text-white backdrop-blur-md active:scale-95"
+        >
+          ×
+        </button>
+      </div>
 
       <div
         className="relative max-h-full max-w-full"
