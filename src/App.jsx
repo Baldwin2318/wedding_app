@@ -476,6 +476,7 @@ function App() {
     const normalizedCode = accessCodeInput.trim().toLowerCase()
     
     if (!normalizedCode) {
+      setAccessCodeInput('')
       setAccessCodeError('Please enter the pass code.')
       setShowAccessTip(true)
       return
@@ -500,6 +501,7 @@ function App() {
       }
   
       if (!payload.valid) {
+        setAccessCodeInput('')
         setAccessCodeError('Invalid access code.')
         setShowAccessTip(true)
         return
@@ -548,6 +550,7 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to verify access code:', error)
+      setAccessCodeInput('')
       setAccessCodeError(
         error instanceof Error ? error.message : 'Failed to verify access code.',
       )
