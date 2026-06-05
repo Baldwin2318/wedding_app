@@ -557,6 +557,7 @@ function App() {
       uuid: '',
       name: 'Guest',
       urlProfilePic: '',
+      verified: false,
     })
     setIsPhotoRestricted(true)
     setShowAccessTip(false)
