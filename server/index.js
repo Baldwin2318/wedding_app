@@ -516,7 +516,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
           FROM codes
           LEFT JOIN profiles
             ON profiles.uuid = codes.uuid
-          WHERE uuid = $1
+          WHERE codes.uuid = $1
           LIMIT 1
         `,
         [accessCodeUuid],

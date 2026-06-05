@@ -3,6 +3,7 @@ import MinimalCameraIcon from './MinimalCameraIcon'
 import HeartMark from './HeartMark'
 import PhotoViewer from './PhotoViewer'
 import ProfileAvatar from './ProfileAvatar'
+import ProfileView from './ProfileView'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -108,6 +109,7 @@ function NewsFeed({
   const posts = [...photos]
   const [optimisticLikes, setOptimisticLikes] = useState({})
   const [selectedPhoto, setSelectedPhoto] = useState(null)
+  const [selectedProfile, setSelectedProfile] = useState(null)
 
   useEffect(() => {
     return () => {
@@ -161,6 +163,10 @@ function NewsFeed({
 
   function handleOpenCamera() {
     onAddPhoto?.()
+  }
+
+  function openProfile(post) {
+    setSelectedProfile(post)
   }
 
   function clearSelectedUpload() {
@@ -504,9 +510,18 @@ function NewsFeed({
 
                 <div className="px-[18px] pt-4 pb-[18px]">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openProfile(post)}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
                       <ProfileAvatar
-                        src={post.profileImage || post.profilePhoto || post.avatar}
+                        src={
+                          post.profileImage ||
+                          post.profilePhoto ||
+                          post.avatar ||
+                          post.authorAvatar
+                        }
                         name={post.author}
                       />
                       <div className="min-w-0">
@@ -514,7 +529,7 @@ function NewsFeed({
                           {post.author}
                         </span>
                       </div>
-                    </div>
+                    </button>
                     <button
                       type="button"
                       className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
@@ -600,6 +615,15 @@ function NewsFeed({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {selectedProfile ? (
+        <ProfileView
+          profile={selectedProfile}
+          posts={photos}
+          onBack={() => setSelectedProfile(null)}
+          onSelectPhoto={setSelectedPhoto}
+        />
       ) : null}
 
       <PhotoViewer
