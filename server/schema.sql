@@ -25,3 +25,11 @@ CREATE TABLE IF NOT EXISTS photo_capture_likes (
 
 CREATE UNIQUE INDEX IF NOT EXISTS photo_capture_likes_photo_identity_idx
 ON photo_capture_likes (photo_capture_id, visitor_identity);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id BIGSERIAL PRIMARY KEY,
+  uuid TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  object_key TEXT UNIQUE,
+  url_profile_pic TEXT
+);

@@ -147,6 +147,61 @@ async function ensureDatabaseSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS photo_capture_likes_photo_identity_idx
     ON photo_capture_likes (photo_capture_id, visitor_identity);
   `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      id BIGSERIAL PRIMARY KEY,
+      uuid TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      object_key TEXT UNIQUE,
+      url_profile_pic TEXT
+    );
+  `)
+
+  await pool.query(`
+    ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS uuid TEXT;
+  `)
+
+  await pool.query(`
+    ALTER TABLE profiles
+    ALTER COLUMN object_key DROP NOT NULL;
+  `)
+
+  await pool.query(`
+    ALTER TABLE profiles
+    ALTER COLUMN url_profile_pic DROP NOT NULL;
+  `)
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'profiles_uuid_key'
+      ) THEN
+        ALTER TABLE profiles
+        ADD CONSTRAINT profiles_uuid_key UNIQUE (uuid);
+      END IF;
+    END
+    $$;
+  `)
+
+  await pool.query(`
+    INSERT INTO profiles (uuid, name)
+    SELECT
+      codes.uuid,
+      INITCAP(SPLIT_PART(codes.code, '_', 1))
+    FROM codes
+    LEFT JOIN profiles
+      ON profiles.uuid = codes.uuid
+    WHERE profiles.uuid IS NULL
+      AND codes.uuid IS NOT NULL
+      AND TRIM(codes.uuid) <> ''
+      AND codes.code IS NOT NULL
+      AND TRIM(codes.code) <> '';
+  `)
 }
 
 app.set('trust proxy', true)
@@ -205,6 +260,26 @@ function getGuestNameFromAccessCode(code = '') {
   }
 
   return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
+}
+
+async function ensureProfileExistsForCodeRow(codeRow) {
+  const accessCodeUuid =
+    typeof codeRow?.uuid === 'string' ? codeRow.uuid.trim() : ''
+  const accessCode = typeof codeRow?.code === 'string' ? codeRow.code.trim() : ''
+
+  if (!accessCodeUuid || !accessCode) {
+    return
+  }
+
+  await pool.query(
+    `
+      INSERT INTO profiles (uuid, name)
+      VALUES ($1, $2)
+      ON CONFLICT (uuid)
+      DO UPDATE SET name = EXCLUDED.name
+    `,
+    [accessCodeUuid, getGuestNameFromAccessCode(accessCode)],
+  )
 }
 
 function getSafeFileExtension(filename = '', mimeType = '') {
@@ -671,6 +746,10 @@ app.post('/api/access-codes/verify', async (request, response) => {
 
     const verifiedCode = result.rows[0]?.code || ''
 
+    if (result.rowCount > 0) {
+      await ensureProfileExistsForCodeRow(result.rows[0])
+    }
+
     response.status(200).json({
       ok: true,
       valid: result.rowCount > 0,
@@ -714,6 +793,10 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
       [accessCodeUuid],
     )
 
+    if (result.rowCount > 0) {
+      await ensureProfileExistsForCodeRow(result.rows[0])
+    }
+
     response.status(200).json({
       ok: true,
       valid: result.rowCount > 0,
@@ -727,6 +810,115 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
         error instanceof Error
           ? error.message
           : 'Failed to verify access code session.',
+    })
+  }
+})
+
+app.post('/api/profiles', upload.single('file'), async (request, response) => {
+  if (!hasR2Config || !r2Client || !r2BucketName || !r2PublicBaseUrl) {
+    response.status(500).json({
+      ok: false,
+      error:
+        'R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL in .env.',
+    })
+    return
+  }
+
+  const file = request.file
+  const requestedUuid =
+    typeof request.body.uuid === 'string'
+      ? request.body.uuid.trim()
+      : typeof request.headers['x-access-code-uuid'] === 'string'
+        ? request.headers['x-access-code-uuid'].trim()
+        : ''
+  if (!requestedUuid) {
+    response.status(400).json({
+      ok: false,
+      error: 'Profile uuid is required.',
+    })
+    return
+  }
+
+  if (!file) {
+    response.status(400).json({
+      ok: false,
+      error: 'Profile picture is required.',
+    })
+    return
+  }
+
+  try {
+    const codeResult = await pool.query(
+      `
+        SELECT uuid, code
+        FROM codes
+        WHERE uuid = $1
+        LIMIT 1
+      `,
+      [requestedUuid],
+    )
+
+    if (codeResult.rowCount === 0) {
+      response.status(404).json({
+        ok: false,
+        error: 'Access code uuid not found.',
+      })
+      return
+    }
+
+    await ensureProfileExistsForCodeRow(codeResult.rows[0])
+    const profileUuid = codeResult.rows[0].uuid
+    const profileName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+
+    const extension = getSafeFileExtension(file.originalname, file.mimetype)
+    const objectKey = `wedding_profile_pics/${Date.now()}-${crypto.randomUUID()}.${extension}`
+
+    await r2Client.send(
+      new PutObjectCommand({
+        Bucket: r2BucketName,
+        Key: objectKey,
+        Body: file.buffer,
+        ContentType: file.mimetype || 'image/jpeg',
+      }),
+    )
+
+    const urlProfilePic = buildPublicImageUrl(objectKey)
+    const result = await pool.query(
+      `
+        INSERT INTO profiles (
+          uuid,
+          name,
+          object_key,
+          url_profile_pic
+        )
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (uuid)
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          object_key = EXCLUDED.object_key,
+          url_profile_pic = EXCLUDED.url_profile_pic
+        RETURNING id, uuid, name, object_key, url_profile_pic
+      `,
+      [profileUuid, profileName, objectKey, urlProfilePic],
+    )
+
+    response.status(200).json({
+      ok: true,
+      profile: {
+        id: String(result.rows[0].id),
+        uuid: result.rows[0].uuid,
+        name: result.rows[0].name,
+        objectKey: result.rows[0].object_key,
+        urlProfilePic: result.rows[0].url_profile_pic,
+      },
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload profile picture and create profile.',
     })
   }
 })
