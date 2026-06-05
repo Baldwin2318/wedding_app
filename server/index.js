@@ -172,7 +172,12 @@ async function ensureDatabaseSchema() {
     ALTER TABLE profiles
     ALTER COLUMN url_profile_pic DROP NOT NULL;
   `)
-
+  
+  await pool.query(`
+    ALTER TABLE profiles
+    ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
+  `)
+  
   await pool.query(`
     DO $$
     BEGIN
@@ -298,7 +303,7 @@ async function getProfileByUuid(accessCodeUuid) {
 
   const result = await pool.query(
     `
-      SELECT id, uuid, name, object_key, url_profile_pic
+      SELECT id, uuid, name, object_key, url_profile_pic, verified
       FROM profiles
       WHERE uuid = $1
       LIMIT 1
@@ -316,6 +321,7 @@ async function getProfileByUuid(accessCodeUuid) {
     name: result.rows[0].name,
     objectKey: result.rows[0].object_key,
     urlProfilePic: result.rows[0].url_profile_pic,
+    verified: Boolean(result.rows[0].verified),
   }
 }
 
@@ -412,6 +418,7 @@ app.get('/api/photos', async (request, response) => {
           COALESCE(profiles.name, photo_captures.uploader_name) AS uploader_name,
           profiles.uuid AS uploader_uuid,
           profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS uploader_verified,
           photo_captures.created_at,
           photo_captures.likes_count,
           photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor
@@ -446,6 +453,7 @@ app.get('/api/photos', async (request, response) => {
         uploaderName: row.uploader_name,
         uploaderUuid: row.uploader_uuid,
         profileImageUrl: row.url_profile_pic,
+        uploaderVerified: Boolean(row.uploader_verified),
         createdAt: row.created_at,
       })),
     })
@@ -547,11 +555,12 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     const objectKey = `wedding-photos/${Date.now()}-${crypto.randomUUID()}.${extension}`
     let uploaderName = 'Guest'
     let profileImageUrl = null
+    let uploaderVerified = false
 
     if (accessCodeUuid) {
       const codeResult = await pool.query(
         `
-          SELECT codes.code, profiles.name, profiles.url_profile_pic
+          SELECT codes.code, profiles.name, profiles.url_profile_pic, profiles.verified
           FROM codes
           LEFT JOIN profiles
             ON profiles.uuid = codes.uuid
@@ -565,6 +574,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
         uploaderName =
           codeResult.rows[0].name || getGuestNameFromAccessCode(codeResult.rows[0].code)
         profileImageUrl = codeResult.rows[0].url_profile_pic || null
+        uploaderVerified = Boolean(codeResult.rows[0].verified)
       }
     }
 
@@ -606,6 +616,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       uploaderName: result.rows[0].uploader_name,
       uploaderUuid: accessCodeUuid || null,
       profileImageUrl,
+      uploaderVerified,
       createdAt: result.rows[0].created_at,
     })
 
@@ -967,7 +978,7 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
           name = EXCLUDED.name,
           object_key = EXCLUDED.object_key,
           url_profile_pic = EXCLUDED.url_profile_pic
-        RETURNING id, uuid, name, object_key, url_profile_pic
+        RETURNING id, uuid, name, object_key, url_profile_pic, verified
       `,
       [profileUuid, profileName, objectKey, urlProfilePic],
     )
