@@ -286,7 +286,7 @@ function App() {
         setIsPhotoRestricted(false)
         
         if (!isAnonymousProfile(restoredProfile)) {
-          setCurrentScreen('guide')
+          setCurrentScreen('feed')
         }
         
         setIsRestoringSession(false)
@@ -516,7 +516,7 @@ function App() {
         if (actionToRun) {
           actionToRun()
         } else {
-          setCurrentScreen('guide')
+          setCurrentScreen('feed')
         }
       }
     } catch (error) {
