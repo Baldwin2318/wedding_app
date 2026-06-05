@@ -1,4 +1,5 @@
 import HeartMark from './HeartMark'
+import MinimalHomeIcon from './MinimalHomeIcon'
 
 function Introduction({
   onNext,
@@ -45,13 +46,14 @@ function Introduction({
           </div>
         </div>
       </section>
-
+      
       <button
         type="button"
-        className="fixed left-6 bottom-6 inline-flex h-14 items-center justify-center rounded-full border border-white bg-white px-6 text-sm font-medium text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95"
+        className="fixed left-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-white text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95"
         onClick={onSkip}
+        aria-label="Go home"
       >
-        Skip
+        <MinimalHomeIcon className="h-6 w-6" />
       </button>
 
       <button
