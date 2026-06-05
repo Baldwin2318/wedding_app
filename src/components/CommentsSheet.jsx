@@ -142,7 +142,7 @@ function CommentsSheet({
             type="button"
             aria-label="Close comments"
             onClick={onClose}
-            className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-2xl leading-none text-zinc-950 transition hover:bg-zinc-200 active:scale-95"
+            className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-2xl leading-none text-zinc-950 transition hover:text-red-200 active:scale-95"
           >
             ×
           </button>
