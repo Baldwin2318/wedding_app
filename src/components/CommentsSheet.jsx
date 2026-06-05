@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ProfileAvatar from './ProfileAvatar'
 import VerifiedBadge from './VerifiedBadge'
 
-function formatCommentTime(value) {
+export function formatRelativeTime(value) {
   if (!value) return ''
 
   const timestamp = new Date(value).getTime()
@@ -23,7 +23,10 @@ function formatCommentTime(value) {
   if (days < 7) return `${days}d`
 
   const weeks = Math.floor(days / 7)
-  return `${weeks}w`
+  if (weeks < 52) return `${weeks}w`
+
+  const years = Math.floor(days / 365)
+  return `${years}y`
 }
 
 function CommentRow({ comment, onEdit, onDelete }) {
@@ -45,7 +48,7 @@ function CommentRow({ comment, onEdit, onDelete }) {
         </div>
 
         <div className="mt-1 flex items-center gap-4 text-xs font-medium text-zinc-500">
-          <span>{formatCommentTime(comment.createdAt)}</span>
+          <span>{formatRelativeTime(comment.createdAt)}</span>
 
           {comment.ownedByCurrentVisitor ? (
             <>
