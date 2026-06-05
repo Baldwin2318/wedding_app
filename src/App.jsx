@@ -8,6 +8,7 @@ import { subscribeToPhotoUpdates } from './lib/subscribeToPhotoUpdates'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
+import HeartMark from './components/HeartMark'
 import {
   PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
   PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
@@ -52,6 +53,7 @@ function App() {
   const [accessCodeError, setAccessCodeError] = useState('')
   const [isAccessCodeErrorVisible, setIsAccessCodeErrorVisible] = useState(false)
   const [pendingRestrictedAction, setPendingRestrictedAction] = useState(null)
+  const [isRestoringSession, setIsRestoringSession] = useState(true)
   const [currentProfile, setCurrentProfile] = useState(() => ({
     uuid: typeof window !== 'undefined'
       ? window.localStorage.getItem(PHOTO_ACCESS_UUID_STORAGE_KEY) || ''
@@ -234,12 +236,13 @@ function App() {
   
     async function verifySavedAccessCodeSession() {
       const savedAccessCodeUuid = window.localStorage.getItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
-  
+        
       if (!savedAccessCodeUuid?.trim()) {
         setIsPhotoRestricted(true)
+        setIsRestoringSession(false)
         return
       }
-  
+      
       try {
         const response = await fetch('/api/access-codes/verify-session', {
           method: 'POST',
@@ -261,6 +264,7 @@ function App() {
           window.localStorage.removeItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY)
           setCurrentProfile({ uuid: '', name: 'Guest', urlProfilePic: '' })
           setIsPhotoRestricted(true)
+          setIsRestoringSession(false)
           return
         }
 
@@ -272,20 +276,29 @@ function App() {
           PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
           payload.profile?.urlProfilePic || '',
         )
-        setCurrentProfile({
+        const restoredProfile = {
           uuid: savedAccessCodeUuid.trim(),
           name: payload.profile?.name || payload.guestName || 'Guest',
           urlProfilePic: payload.profile?.urlProfilePic || '',
-        })
+        }
+        
+        setCurrentProfile(restoredProfile)
         setIsPhotoRestricted(false)
+        
+        if (!isAnonymousProfile(restoredProfile)) {
+          setCurrentScreen('guide')
+        }
+        
+        setIsRestoringSession(false)
         refreshFeedPhotos({ showSkeleton: false }).catch((error) => {
           console.error('Failed to refresh feed after restored login:', error)
         })
       } catch (error) {
         console.error('Failed to verify saved access code session:', error)
-  
+      
         if (!isCancelled) {
           setIsPhotoRestricted(true)
+          setIsRestoringSession(false)
         }
       }
     }
@@ -500,7 +513,11 @@ function App() {
       await refreshFeedPhotos({ showSkeleton: true })
       
       if (!isAnonymousLogin) {
-        actionToRun?.()
+        if (actionToRun) {
+          actionToRun()
+        } else {
+          setCurrentScreen('guide')
+        }
       }
     } catch (error) {
       console.error('Failed to verify access code:', error)
@@ -567,7 +584,29 @@ function App() {
       ),
     )
   }
+
+  if (isRestoringSession) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 px-6">
+        <div className="flex w-full max-w-[320px] flex-col items-center rounded-[32px] border border-white/80 bg-white/85 px-6 py-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-zinc-950 shadow-[0_14px_35px_rgba(0,0,0,0.18)]">
+            <HeartMark className="h-9 w-9 text-white" />
+          </div>
   
+          <p className="mb-1 text-base font-semibold text-zinc-950">
+            Happy Memories
+          </p>
+  
+          <p className="mb-6 text-sm text-zinc-500">
+            Preparing your wedding feed...
+          </p>
+  
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950" />
+        </div>
+      </div>
+    )
+  }
+    
   const screens = {
     introduction: (
       <Introduction
