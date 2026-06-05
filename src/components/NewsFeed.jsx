@@ -96,6 +96,7 @@ function NewsFeed({
   onGoHome,
   currentProfile = null,
   canEditProfile = false,
+  canLikePhotos = false,
   onProfileUpdated,
   onLogout,
 }) {
@@ -706,8 +707,16 @@ function NewsFeed({
                       </button>
                       <button
                         type="button"
-                        className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
-                        onClick={() => handleLike(post.id, isPersistedPhoto, isLiked, likeCount)}
+                        className={`inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium transition ${
+                          canLikePhotos
+                            ? 'text-zinc-950 hover:opacity-80'
+                            : 'cursor-not-allowed opacity-40 text-zinc-950'
+                        }`}
+                        onClick={() =>
+                          canLikePhotos &&
+                          handleLike(post.id, isPersistedPhoto, isLiked, likeCount)
+                        }
+                        disabled={!canLikePhotos}
                         aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
                       >
                         <HeartIcon isLiked={isLiked} />
