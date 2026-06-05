@@ -8,6 +8,7 @@ function ProfileSettings({
   error = '',
   onClose,
   onSave,
+  onLogout,
 }) {
   const [name, setName] = useState(profile?.name || 'Guest')
   const [selectedFile, setSelectedFile] = useState(null)
@@ -120,6 +121,15 @@ function ProfileSettings({
               {error}
             </p>
           ) : null}
+
+          <button
+            type="button"
+            className="w-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition active:scale-[0.99] hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onLogout}
+            disabled={isSaving}
+          >
+            Log out
+          </button>
 
           <div className="flex items-center justify-end gap-3">
             <button
