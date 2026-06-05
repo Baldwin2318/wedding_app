@@ -809,6 +809,91 @@ app.delete('/api/photos/:id/like', async (request, response) => {
   }
 })
 
+app.delete('/api/photos/:id', async (request, response) => {
+  const { id } = request.params
+  const accessCodeUuid = getAccessCodeUuid(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
+  const client = await pool.connect()
+
+  if (!accessCodeUuid || isAnonymousAccessCodeUuid(accessCodeUuid)) {
+    response.status(401).json({
+      ok: false,
+      error: 'Login is required to delete a post.',
+    })
+    return
+  }
+
+  try {
+    await client.query('BEGIN')
+
+    const photoResult = await client.query(
+      `
+        SELECT id, object_key, visitor_identity
+        FROM photo_captures
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [id],
+    )
+
+    if (photoResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Photo not found.',
+      })
+      return
+    }
+
+    const photo = photoResult.rows[0]
+
+    if (photo.visitor_identity !== visitorIdentity) {
+      await client.query('ROLLBACK')
+      response.status(403).json({
+        ok: false,
+        error: 'You can only delete your own post.',
+      })
+      return
+    }
+
+    await client.query(
+      `
+        DELETE FROM photo_captures
+        WHERE id = $1
+      `,
+      [id],
+    )
+
+    await client.query('COMMIT')
+
+    if (photo.object_key && hasR2Config && r2Client && r2BucketName) {
+      try {
+        await r2Client.send(
+          new DeleteObjectCommand({
+            Bucket: r2BucketName,
+            Key: photo.object_key,
+          }),
+        )
+      } catch (error) {
+        console.error('Failed to delete photo from R2:', error)
+      }
+    }
+
+    response.status(200).json({
+      ok: true,
+      id: String(id),
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to delete photo.',
+    })
+  } finally {
+    client.release()
+  }
+})
+
 function getAccessCodeUuid(request) {
   const accessCodeUuid = request.headers['x-access-code-uuid']
 
@@ -1248,92 +1333,6 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
           ? error.message
           : 'Failed to verify access code session.',
     })
-  }
-})
-
-app.delete('/api/photos/:id', async (request, response) => {
-  const { id } = request.params
-  const accessCodeUuid = getAccessCodeUuid(request)
-  const visitorIdentity = getRequestVisitorIdentity(request)
-  const client = await pool.connect()
-
-  if (!accessCodeUuid || isAnonymousAccessCodeUuid(accessCodeUuid)) {
-    response.status(401).json({
-      ok: false,
-      error: 'Login is required to delete a post.',
-    })
-    return
-  }
-
-  try {
-    await client.query('BEGIN')
-
-    const photoResult = await client.query(
-      `
-        SELECT id, object_key, visitor_identity
-        FROM photo_captures
-        WHERE id = $1
-        FOR UPDATE
-      `,
-      [id],
-    )
-
-    if (photoResult.rowCount === 0) {
-      await client.query('ROLLBACK')
-      response.status(404).json({
-        ok: false,
-        error: 'Photo not found.',
-      })
-      return
-    }
-
-    const photo = photoResult.rows[0]
-
-    if (photo.visitor_identity !== visitorIdentity) {
-      await client.query('ROLLBACK')
-      response.status(403).json({
-        ok: false,
-        error: 'You can only delete your own post.',
-      })
-      return
-    }
-
-    await client.query(
-      `
-        DELETE FROM photo_captures
-        WHERE id = $1
-      `,
-      [id],
-    )
-
-    await client.query('COMMIT')
-
-    if (photo.object_key && hasR2Config && r2Client && r2BucketName) {
-      try {
-        await r2Client.send(
-          new DeleteObjectCommand({
-            Bucket: r2BucketName,
-            Key: photo.object_key,
-          }),
-        )
-      } catch (error) {
-        console.error('Failed to delete photo from R2:', error)
-      }
-    }
-
-    response.status(200).json({
-      ok: true,
-      id: String(id),
-    })
-  } catch (error) {
-    await client.query('ROLLBACK')
-    response.status(500).json({
-      ok: false,
-      error:
-        error instanceof Error ? error.message : 'Failed to delete photo.',
-    })
-  } finally {
-    client.release()
   }
 })
 
