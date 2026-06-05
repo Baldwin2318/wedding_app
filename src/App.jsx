@@ -589,9 +589,7 @@ function App() {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 px-6">
         <div className="flex w-full max-w-[320px] flex-col items-center rounded-[32px] border border-white/80 bg-white/85 px-6 py-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.12)] backdrop-blur-xl">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-zinc-950 shadow-[0_14px_35px_rgba(0,0,0,0.18)]">
-            <HeartMark className="h-9 w-9 text-white" />
-          </div>
+          <HeartMark className="h-9 w-9 text-white" />
   
           <p className="mb-1 text-base font-semibold text-zinc-950">
             Happy Memories
