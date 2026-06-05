@@ -47,38 +47,48 @@ function Guide({
       </section>
 
       {showAccessTip ? (
-        <div className="absolute right-6 bottom-24 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-left text-sm shadow-xl">
-          <p className="mb-3 text-zinc-700">
-            Taking pictures is restricted.
-          </p>
-      
-          {accessCodeError ? (
-            <p
-              className={`mb-3 text-xs font-medium text-red-600 transition-opacity duration-500 ${
-                accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              {accessCodeError}
-            </p>
-          ) : null}
-      
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              className="rounded-full px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100"
-              onClick={onCloseAccessTip}
-            >
-              Cancel
-            </button>
-      
-            <button
-              type="button"
-              className="rounded-full bg-zinc-950 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={onAccessClick}
-              disabled={isVerifyingAccessCode}
-            >
-              {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
-            </button>
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-zinc-950/35 px-5 backdrop-blur-[4px]">
+          <div className="w-full max-w-[340px] overflow-hidden rounded-[30px] border border-white/70 bg-white/95 text-center shadow-[0_28px_80px_rgba(15,23,42,0.24)]">
+            <div className="px-6 pt-7 pb-5">
+              <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 shadow-inner">
+                <MinimalCameraIcon className="h-6 w-6" />
+              </div>
+              <h2 className="text-lg font-semibold text-zinc-950">
+                Passcode required
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600">
+                Enter your wedding passcode to take or upload photos.
+              </p>
+
+              {accessCodeError ? (
+                <p
+                  className={`mt-4 text-sm font-medium text-red-600 transition-opacity duration-500 ${
+                    accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {accessCodeError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-2 border-t border-zinc-200/80">
+              <button
+                type="button"
+                className="border-r border-zinc-200/80 px-4 py-4 text-sm font-semibold text-zinc-600 transition active:bg-zinc-100"
+                onClick={onCloseAccessTip}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="px-4 py-4 text-sm font-semibold text-sky-600 transition active:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={onAccessClick}
+                disabled={isVerifyingAccessCode}
+              >
+                {isVerifyingAccessCode ? 'Checking...' : 'Enter code'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
