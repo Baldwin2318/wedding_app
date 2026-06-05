@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS photo_captures (
   caption TEXT NOT NULL DEFAULT '',
   ip_address TEXT NOT NULL,
   visitor_identity TEXT NOT NULL,
+  uploader_name TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   likes_count INTEGER
 );

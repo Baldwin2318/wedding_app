@@ -103,6 +103,22 @@ async function ensureDatabaseSchema() {
   `)
 
   await pool.query(`
+    ALTER TABLE photo_captures
+    ADD COLUMN IF NOT EXISTS uploader_name TEXT;
+  `)
+
+  await pool.query(`
+    UPDATE photo_captures
+    SET uploader_name = 'Guest'
+    WHERE uploader_name IS NULL;
+  `)
+
+  await pool.query(`
+    ALTER TABLE photo_captures
+    ALTER COLUMN uploader_name SET NOT NULL;
+  `)
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS photo_capture_likes (
       photo_capture_id BIGINT NOT NULL REFERENCES photo_captures(id) ON DELETE CASCADE,
       ip_address TEXT NOT NULL,
@@ -179,6 +195,16 @@ function getRequestVisitorIdentity(request) {
   }
 
   return `ip:${getRequestIpAddress(request)}`
+}
+
+function getGuestNameFromAccessCode(code = '') {
+  const rawName = String(code).trim().split('_')[0]?.trim()
+
+  if (!rawName) {
+    return 'Guest'
+  }
+
+  return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()
 }
 
 function getSafeFileExtension(filename = '', mimeType = '') {
@@ -271,6 +297,7 @@ app.get('/api/photos', async (request, response) => {
           photo_captures.image_url,
           photo_captures.caption,
           photo_captures.ip_address,
+          photo_captures.uploader_name,
           photo_captures.created_at,
           photo_captures.likes_count,
           photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor
@@ -299,6 +326,7 @@ app.get('/api/photos', async (request, response) => {
         likesCount: row.likes_count,
         likedByCurrentVisitor: row.liked_by_current_visitor,
         ipAddress: row.ip_address,
+        uploaderName: row.uploader_name,
         createdAt: row.created_at,
       })),
     })
@@ -382,6 +410,10 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
   const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
   const visitorIdentity = getRequestVisitorIdentity(request)
+  const accessCodeUuid =
+    typeof request.headers['x-access-code-uuid'] === 'string'
+      ? request.headers['x-access-code-uuid'].trim()
+      : ''
 
   if (!file) {
     response.status(400).json({
@@ -394,6 +426,23 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
   try {
     const extension = getSafeFileExtension(file.originalname, file.mimetype)
     const objectKey = `wedding-photos/${Date.now()}-${crypto.randomUUID()}.${extension}`
+    let uploaderName = 'Guest'
+
+    if (accessCodeUuid) {
+      const codeResult = await pool.query(
+        `
+          SELECT code
+          FROM codes
+          WHERE uuid = $1
+          LIMIT 1
+        `,
+        [accessCodeUuid],
+      )
+
+      if (codeResult.rowCount > 0) {
+        uploaderName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+      }
+    }
 
     await r2Client.send(
       new PutObjectCommand({
@@ -413,12 +462,13 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
           caption,
           ip_address,
           visitor_identity,
+          uploader_name,
           created_at
         )
-        VALUES ($1, $2, $3, $4, $5, NOW())
-        RETURNING id, object_key, image_url, caption, ip_address, created_at, likes_count
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        RETURNING id, object_key, image_url, caption, ip_address, uploader_name, created_at, likes_count
       `,
-      [objectKey, imageUrl, caption, ipAddress, visitorIdentity],
+      [objectKey, imageUrl, caption, ipAddress, visitorIdentity, uploaderName],
     )
 
     response.status(200).json({
@@ -429,6 +479,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       caption: result.rows[0].caption,
       likesCount: result.rows[0].likes_count,
       ipAddress: result.rows[0].ip_address,
+      uploaderName: result.rows[0].uploader_name,
       createdAt: result.rows[0].created_at,
     })
 
@@ -610,13 +661,15 @@ app.post('/api/access-codes/verify', async (request, response) => {
   try {
     const result = await pool.query(
       `
-        SELECT uuid
+        SELECT uuid, code
         FROM codes
         WHERE code = $1
         LIMIT 1
       `,
       [code],
     )
+
+    const verifiedCode = result.rows[0]?.code || ''
 
     response.status(200).json({
       ok: true,
@@ -625,6 +678,7 @@ app.post('/api/access-codes/verify', async (request, response) => {
         typeof result.rows[0]?.uuid === 'string' && result.rows[0].uuid.trim()
           ? result.rows[0].uuid.trim()
           : null,
+      guestName: result.rowCount > 0 ? getGuestNameFromAccessCode(verifiedCode) : null,
     })
   } catch (error) {
     response.status(500).json({
@@ -652,7 +706,7 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
   try {
     const result = await pool.query(
       `
-        SELECT uuid
+        SELECT uuid, code
         FROM codes
         WHERE uuid = $1
         LIMIT 1
@@ -663,6 +717,8 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
     response.status(200).json({
       ok: true,
       valid: result.rowCount > 0,
+      guestName:
+        result.rowCount > 0 ? getGuestNameFromAccessCode(result.rows[0].code) : null,
     })
   } catch (error) {
     response.status(500).json({

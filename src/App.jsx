@@ -8,7 +8,10 @@ import { subscribeToPhotoUpdates } from './lib/subscribeToPhotoUpdates'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
-import { PHOTO_ACCESS_UUID_STORAGE_KEY } from './lib/accessCode'
+import {
+  PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+  PHOTO_ACCESS_UUID_STORAGE_KEY,
+} from './lib/accessCode'
 
 let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
@@ -22,7 +25,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     caption: photo.caption || 'Wedding memory',
     likesCount: photo.likesCount ?? null,
     likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
-    author: 'Guest',
+    author: photo.uploaderName || 'Guest',
   }
 }
 
@@ -186,9 +189,15 @@ function App() {
   
         if (!response.ok || !payload.ok || !payload.valid) {
           window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
+          window.localStorage.removeItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY)
           setIsPhotoRestricted(true)
           return
         }
+
+        window.localStorage.setItem(
+          PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+          payload.guestName || 'Guest',
+        )
         setIsPhotoRestricted(false)
       } catch (error) {
         console.error('Failed to verify saved access code session:', error)
@@ -225,7 +234,7 @@ function App() {
           caption: uploadedPhoto.caption || photo.caption || 'New wedding memory',
           likesCount: uploadedPhoto.likesCount ?? null,
           likedByCurrentVisitor: false,
-          author: 'You',
+          author: uploadedPhoto.uploaderName || 'Guest',
         },
         ...currentPhotos,
       ])
@@ -248,7 +257,7 @@ function App() {
         caption: uploadedPhoto.caption || 'New wedding memory',
         likesCount: uploadedPhoto.likesCount ?? null,
         likedByCurrentVisitor: false,
-        author: 'You',
+        author: uploadedPhoto.uploaderName || 'Guest',
       },
       ...currentPhotos,
     ])
@@ -366,6 +375,10 @@ function App() {
       window.localStorage.setItem(
         PHOTO_ACCESS_UUID_STORAGE_KEY,
         String(payload.accessCodeUuid),
+      )
+      window.localStorage.setItem(
+        PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+        payload.guestName || 'Guest',
       )
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_STORAGE_KEY)
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
