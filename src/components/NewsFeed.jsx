@@ -567,7 +567,19 @@ function NewsFeed({
               {isVerifyingAccessCode ? 'Checking...' : 'Login'}
             </button>
           )}
-    
+        </div>
+       </div>
+
+        <div
+          ref={scrollContainerRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 bg-zinc-50 px-5 pt-5 pb-6 [scrollbar-gutter:stable] sm:px-4 sm:pt-4"
+          onScroll={handleScroll}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchMove}
+          onTouchStart={handleTouchStart}
+          onWheel={handleWheel}
+        >
+
           {showAccessTip ? (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/25 px-5 backdrop-blur-md">
               <div className="w-full max-w-[320px] rounded-[28px] border border-white/70 bg-white/85 p-5 text-center text-sm shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
@@ -608,18 +620,7 @@ function NewsFeed({
               </div>
             </div>
           ) : null}
-        </div>
-       </div>
-
-        <div
-          ref={scrollContainerRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain space-y-4 bg-zinc-50 px-5 pt-5 pb-6 [scrollbar-gutter:stable] sm:px-4 sm:pt-4"
-          onScroll={handleScroll}
-          onTouchEnd={handleTouchEnd}
-          onTouchMove={handleTouchMove}
-          onTouchStart={handleTouchStart}
-          onWheel={handleWheel}
-        >
+          
           {isInitialLoadingPhotos ? (
             <>
               <FeedSkeletonCard />
