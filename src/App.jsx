@@ -54,6 +54,7 @@ function App() {
   const [isAccessCodeErrorVisible, setIsAccessCodeErrorVisible] = useState(false)
   const [pendingRestrictedAction, setPendingRestrictedAction] = useState(null)
   const [isRestoringSession, setIsRestoringSession] = useState(true)
+  const [accessCodeInput, setAccessCodeInput] = useState('')
   const [currentProfile, setCurrentProfile] = useState(() => ({
     uuid: typeof window !== 'undefined'
       ? window.localStorage.getItem(PHOTO_ACCESS_UUID_STORAGE_KEY) || ''
@@ -449,10 +450,11 @@ function App() {
   }
   
   async function handleAccessClick() {
-    const code = window.prompt('Enter the access code')
-    const normalizedCode = code?.trim().toLowerCase() || ''
-  
+    const normalizedCode = accessCodeInput.trim().toLowerCase()
+    
     if (!normalizedCode) {
+      setAccessCodeError('Please enter the pass code.')
+      setShowAccessTip(true)
       return
     }
   
@@ -509,6 +511,7 @@ function App() {
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
       setIsPhotoRestricted(false)
       setShowAccessTip(false)
+      setAccessCodeInput('')
       setPendingRestrictedAction(null)
       await refreshFeedPhotos({ showSkeleton: true })
       
