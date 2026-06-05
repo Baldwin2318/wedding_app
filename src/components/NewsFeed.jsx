@@ -7,6 +7,7 @@ import ProfileView from './ProfileView'
 import useBrowserBackStack from '../hooks/useBrowserBackStack'
 import ProfileSettings from './ProfileSettings'
 import { saveProfile } from '../lib/saveProfile'
+import FeedSkeletonCard from './FeedSkeletonCard'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -598,11 +599,13 @@ function NewsFeed({
           onTouchStart={handleTouchStart}
           onWheel={handleWheel}
         >
-          {/* {isInitialLoadingPhotos ? (
-            <div className="mx-auto w-full max-w-[520px] rounded-3xl border border-zinc-950 bg-white px-4 py-6 text-center text-sm text-zinc-600">
-              Loading photos...
-            </div>
-          ) : null} */}
+          {isInitialLoadingPhotos ? (
+            <>
+              <FeedSkeletonCard />
+              <FeedSkeletonCard />
+              <FeedSkeletonCard />
+            </>
+          ) : null}
 
           {onRefreshPhotos ? (
             <div
@@ -647,82 +650,84 @@ function NewsFeed({
             </div>
           ) : null}
 
-          {posts.map((post) => {
-            const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
-            const optimisticLike = optimisticLikes[post.id]
-            
-            const baseIsLiked = isPersistedPhoto
-              ? Boolean(post.likedByCurrentVisitor)
-              : false
-            
-            const baseLikeCount = Number(post.likesCount) || 0
-            
-            const isLiked = optimisticLike?.isLiked ?? baseIsLiked
-            const likeCount = optimisticLike?.likesCount ?? baseLikeCount
-            const showLikeCount = likeCount > 0
+          {!isInitialLoadingPhotos &&
+            posts.map((post) => {
+              const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
+              const optimisticLike = optimisticLikes[post.id]
+              
+              const baseIsLiked = isPersistedPhoto
+                ? Boolean(post.likedByCurrentVisitor)
+                : false
+              
+              const baseLikeCount = Number(post.likesCount) || 0
+              
+              const isLiked = optimisticLike?.isLiked ?? baseIsLiked
+              const likeCount = optimisticLike?.likesCount ?? baseLikeCount
+              const showLikeCount = likeCount > 0
 
-            return (
-                <article
-                  key={post.id}
-                  className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
-                >
-                <img
-                  className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
-                  src={post.image}
-                  alt={post.caption ?? "Wedding photo"}
-                  onClick={() =>
-                    setSelectedPhoto({
-                      src: post.image,
-                      alt: post.caption ?? 'Wedding photo',
-                    })
-                  }
-                />
+              return (
+                  <article
+                    key={post.id}
+                    className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
+                  >
+                  <img
+                    className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
+                    src={post.image}
+                    alt={post.caption ?? "Wedding photo"}
+                    onClick={() =>
+                      setSelectedPhoto({
+                        src: post.image,
+                        alt: post.caption ?? 'Wedding photo',
+                      })
+                    }
+                  />
 
-                <div className="px-[18px] pt-4 pb-[18px]">
-                  <div className="flex items-center justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={() => openProfile(post)}
-                      className="flex min-w-0 items-center gap-3 text-left"
-                    >
-                      <ProfileAvatar
-                        src={
-                          post.profileImage ||
-                          post.profilePhoto ||
-                          post.avatar ||
-                          post.authorAvatar
-                        }
-                        name={post.author}
-                      />
-                      <div className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-zinc-950">
-                          {post.author}
-                        </span>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
-                      onClick={() => handleLike(post.id, isPersistedPhoto, isLiked, likeCount)}
-                      aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
-                    >
-                      <HeartIcon isLiked={isLiked} />
-                      {showLikeCount ? <span>{likeCount}</span> : null}
-                    </button>
+                  <div className="px-[18px] pt-4 pb-[18px]">
+                    <div className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openProfile(post)}
+                        className="flex min-w-0 items-center gap-3 text-left"
+                      >
+                        <ProfileAvatar
+                          src={
+                            post.profileImage ||
+                            post.profilePhoto ||
+                            post.avatar ||
+                            post.authorAvatar
+                          }
+                          name={post.author}
+                        />
+                        <div className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-zinc-950">
+                            {post.author}
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
+                        onClick={() => handleLike(post.id, isPersistedPhoto, isLiked, likeCount)}
+                        aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
+                      >
+                        <HeartIcon isLiked={isLiked} />
+                        {showLikeCount ? <span>{likeCount}</span> : null}
+                      </button>
+                    </div>
+
+                    <p className="mt-3.5 text-left text-base leading-7 text-zinc-700">
+                      {post.caption}
+                    </p>
                   </div>
-
-                  <p className="mt-3.5 text-left text-base leading-7 text-zinc-700">
-                    {post.caption}
-                  </p>
-                </div>
-              </article>
-            )
-          })}
+                </article>
+              )
+            })}
 
           {isLoadingMorePhotos ? (
-            <div className="mx-auto w-full max-w-[520px] px-4 py-3 text-center text-sm text-zinc-500">
-              Loading more photos...
-            </div>
+            <>
+              <FeedSkeletonCard />
+              <FeedSkeletonCard />
+            </>
           ) : null}
 
           <footer className="mx-auto mt-8 mb-6 max-w-[520px] px-6 text-center">
