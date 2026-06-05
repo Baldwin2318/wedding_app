@@ -1,6 +1,11 @@
+import { getAccessCodeHeaders } from './accessCode'
+
 export async function togglePhotoLike(photoId, shouldLike) {
   const response = await fetch(`/api/photos/${photoId}/like`, {
     method: shouldLike ? 'POST' : 'DELETE',
+    headers: {
+      ...getAccessCodeHeaders(),
+    },
   })
   const payload = await response.json().catch(() => null)
 

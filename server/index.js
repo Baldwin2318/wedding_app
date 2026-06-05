@@ -87,12 +87,49 @@ async function ensureDatabaseSchema() {
   `)
 
   await pool.query(`
+    ALTER TABLE photo_captures
+    ADD COLUMN IF NOT EXISTS visitor_identity TEXT;
+  `)
+
+  await pool.query(`
+    UPDATE photo_captures
+    SET visitor_identity = CONCAT('ip:', ip_address)
+    WHERE visitor_identity IS NULL;
+  `)
+
+  await pool.query(`
+    ALTER TABLE photo_captures
+    ALTER COLUMN visitor_identity SET NOT NULL;
+  `)
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS photo_capture_likes (
       photo_capture_id BIGINT NOT NULL REFERENCES photo_captures(id) ON DELETE CASCADE,
       ip_address TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (photo_capture_id, ip_address)
     );
+  `)
+
+  await pool.query(`
+    ALTER TABLE photo_capture_likes
+    ADD COLUMN IF NOT EXISTS visitor_identity TEXT;
+  `)
+
+  await pool.query(`
+    UPDATE photo_capture_likes
+    SET visitor_identity = CONCAT('ip:', ip_address)
+    WHERE visitor_identity IS NULL;
+  `)
+
+  await pool.query(`
+    ALTER TABLE photo_capture_likes
+    ALTER COLUMN visitor_identity SET NOT NULL;
+  `)
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS photo_capture_likes_photo_identity_idx
+    ON photo_capture_likes (photo_capture_id, visitor_identity);
   `)
 }
 
@@ -132,6 +169,16 @@ function getRequestClientId(request) {
   }
 
   return getRequestIpAddress(request)
+}
+
+function getRequestVisitorIdentity(request) {
+  const accessCodeUuid = request.headers['x-access-code-uuid']
+
+  if (typeof accessCodeUuid === 'string' && accessCodeUuid.trim()) {
+    return `code:${accessCodeUuid.trim()}`
+  }
+
+  return `ip:${getRequestIpAddress(request)}`
 }
 
 function getSafeFileExtension(filename = '', mimeType = '') {
@@ -211,7 +258,7 @@ app.get('/api/health', async (_request, response) => {
 })
 
 app.get('/api/photos', async (request, response) => {
-  const ipAddress = getRequestIpAddress(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
   const limit = Math.min(Math.max(Number(request.query.limit) || 12, 1), 50)
   const offset = Math.max(Number(request.query.offset) || 0, 0)
 
@@ -230,12 +277,12 @@ app.get('/api/photos', async (request, response) => {
         FROM photo_captures
         LEFT JOIN photo_capture_likes
           ON photo_capture_likes.photo_capture_id = photo_captures.id
-          AND photo_capture_likes.ip_address = $1
+          AND photo_capture_likes.visitor_identity = $1
         ORDER BY photo_captures.created_at DESC
         LIMIT $2
         OFFSET $3
       `,
-      [ipAddress, limit + 1, offset],
+      [visitorIdentity, limit + 1, offset],
     )
 
     const rowsToReturn = result.rows.slice(0, limit)
@@ -334,6 +381,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     typeof request.body.caption === 'string' ? request.body.caption.trim() : ''
   const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
 
   if (!file) {
     response.status(400).json({
@@ -364,12 +412,13 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
           image_url,
           caption,
           ip_address,
+          visitor_identity,
           created_at
         )
-        VALUES ($1, $2, $3, $4, NOW())
+        VALUES ($1, $2, $3, $4, $5, NOW())
         RETURNING id, object_key, image_url, caption, ip_address, created_at, likes_count
       `,
-      [objectKey, imageUrl, caption, ipAddress],
+      [objectKey, imageUrl, caption, ipAddress, visitorIdentity],
     )
 
     response.status(200).json({
@@ -402,6 +451,7 @@ app.post('/api/photos/:id/like', async (request, response) => {
   const { id } = request.params
   const clientId = getRequestClientId(request)
   const ipAddress = getRequestIpAddress(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
   const client = await pool.connect()
 
   try {
@@ -428,9 +478,9 @@ app.post('/api/photos/:id/like', async (request, response) => {
     const result = await client.query(
       `
         WITH inserted_like AS (
-          INSERT INTO photo_capture_likes (photo_capture_id, ip_address)
-          VALUES ($1, $2)
-          ON CONFLICT (photo_capture_id, ip_address) DO NOTHING
+          INSERT INTO photo_capture_likes (photo_capture_id, ip_address, visitor_identity)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (photo_capture_id, visitor_identity) DO NOTHING
           RETURNING photo_capture_id
         )
         UPDATE photo_captures
@@ -442,7 +492,7 @@ app.post('/api/photos/:id/like', async (request, response) => {
         WHERE id = $1
         RETURNING id, likes_count
       `,
-      [id, ipAddress],
+      [id, ipAddress, visitorIdentity],
     )
 
     await client.query('COMMIT')
@@ -475,7 +525,7 @@ app.post('/api/photos/:id/like', async (request, response) => {
 app.delete('/api/photos/:id/like', async (request, response) => {
   const { id } = request.params
   const clientId = getRequestClientId(request)
-  const ipAddress = getRequestIpAddress(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
   const client = await pool.connect()
 
   try {
@@ -504,7 +554,7 @@ app.delete('/api/photos/:id/like', async (request, response) => {
         WITH deleted_like AS (
           DELETE FROM photo_capture_likes
           WHERE photo_capture_id = $1
-            AND ip_address = $2
+            AND visitor_identity = $2
           RETURNING photo_capture_id
         )
         UPDATE photo_captures
@@ -516,7 +566,7 @@ app.delete('/api/photos/:id/like', async (request, response) => {
         WHERE id = $1
         RETURNING id, likes_count
       `,
-      [id, ipAddress],
+      [id, visitorIdentity],
     )
 
     await client.query('COMMIT')
@@ -546,7 +596,7 @@ app.delete('/api/photos/:id/like', async (request, response) => {
   }
 })
 
-app.post('/api/access-codes/verify', async (request, response) => {//bmm
+app.post('/api/access-codes/verify', async (request, response) => {
   const code = typeof request.body?.code === 'string' ? request.body.code.trim() : ''
 
   if (!code) {
@@ -560,7 +610,7 @@ app.post('/api/access-codes/verify', async (request, response) => {//bmm
   try {
     const result = await pool.query(
       `
-        SELECT id
+        SELECT uuid
         FROM codes
         WHERE code = $1
         LIMIT 1
@@ -571,12 +621,56 @@ app.post('/api/access-codes/verify', async (request, response) => {//bmm
     response.status(200).json({
       ok: true,
       valid: result.rowCount > 0,
+      accessCodeUuid:
+        typeof result.rows[0]?.uuid === 'string' && result.rows[0].uuid.trim()
+          ? result.rows[0].uuid.trim()
+          : null,
     })
   } catch (error) {
     response.status(500).json({
       ok: false,
       error:
         error instanceof Error ? error.message : 'Failed to verify access code.',
+    })
+  }
+})
+
+app.post('/api/access-codes/verify-session', async (request, response) => {
+  const accessCodeUuid =
+    typeof request.body?.accessCodeUuid === 'string'
+      ? request.body.accessCodeUuid.trim()
+      : ''
+
+  if (!accessCodeUuid) {
+    response.status(400).json({
+      ok: false,
+      error: 'Access code UUID is required.',
+    })
+    return
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT uuid
+        FROM codes
+        WHERE uuid = $1
+        LIMIT 1
+      `,
+      [accessCodeUuid],
+    )
+
+    response.status(200).json({
+      ok: true,
+      valid: result.rowCount > 0,
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to verify access code session.',
     })
   }
 })

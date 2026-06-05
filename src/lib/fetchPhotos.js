@@ -1,9 +1,15 @@
+import { getAccessCodeHeaders } from './accessCode'
+
 export async function fetchSavedPhotos({ limit = 12, offset = 0 } = {}) {
   const searchParams = new URLSearchParams({
     limit: String(limit),
     offset: String(offset),
   })
-  const response = await fetch(`/api/photos?${searchParams.toString()}`)
+  const response = await fetch(`/api/photos?${searchParams.toString()}`, {
+    headers: {
+      ...getAccessCodeHeaders(),
+    },
+  })
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {

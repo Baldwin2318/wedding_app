@@ -1,4 +1,5 @@
 import { getClientId } from './clientIdentity'
+import { getAccessCodeHeaders } from './accessCode'
 
 function dataUrlToFile(dataUrl, filename = `capture-${Date.now()}.jpg`) {
   const [header, base64] = dataUrl.split(',')
@@ -34,6 +35,7 @@ async function uploadPhotoFile({ file, caption = '' }) {
     method: 'POST',
     headers: {
       'x-client-id': getClientId(),
+      ...getAccessCodeHeaders(),
     },
     body: formData,
   })

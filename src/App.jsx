@@ -8,10 +8,12 @@ import { subscribeToPhotoUpdates } from './lib/subscribeToPhotoUpdates'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
+import { PHOTO_ACCESS_UUID_STORAGE_KEY } from './lib/accessCode'
 
 let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
-const PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
+const LEGACY_PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
+const LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY = 'wedding_photo_access_code_id'
 
 function mapSavedPhotoToFeedPhoto(photo) {
   return {
@@ -155,22 +157,25 @@ function App() {
 
   useEffect(() => {
     let isCancelled = false
+
+    window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_STORAGE_KEY)
+    window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
   
-    async function verifySavedAccessCode() {
-      const savedCode = window.localStorage.getItem(PHOTO_ACCESS_STORAGE_KEY)
+    async function verifySavedAccessCodeSession() {
+      const savedAccessCodeUuid = window.localStorage.getItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
   
-      if (!savedCode?.trim()) {
+      if (!savedAccessCodeUuid?.trim()) {
         setIsPhotoRestricted(true)
         return
       }
   
       try {
-        const response = await fetch('/api/access-codes/verify', {
+        const response = await fetch('/api/access-codes/verify-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ code: savedCode.trim() }),
+          body: JSON.stringify({ accessCodeUuid: savedAccessCodeUuid.trim() }),
         })
   
         const payload = await response.json()
@@ -180,14 +185,13 @@ function App() {
         }
   
         if (!response.ok || !payload.ok || !payload.valid) {
-          window.localStorage.removeItem(PHOTO_ACCESS_STORAGE_KEY)
+          window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
           setIsPhotoRestricted(true)
           return
         }
-  
         setIsPhotoRestricted(false)
       } catch (error) {
-        console.error('Failed to verify saved access code:', error)
+        console.error('Failed to verify saved access code session:', error)
   
         if (!isCancelled) {
           setIsPhotoRestricted(true)
@@ -195,7 +199,7 @@ function App() {
       }
     }
   
-    verifySavedAccessCode()
+    verifySavedAccessCodeSession()
   
     return () => {
       isCancelled = true
@@ -352,10 +356,19 @@ function App() {
         setAccessCodeError('Invalid access code.')
         return
       }
+
+      if (!payload.accessCodeUuid) {
+        throw new Error('Access code verification succeeded without a UUID.')
+      }
       
       const actionToRun = pendingRestrictedAction
     
-      window.localStorage.setItem(PHOTO_ACCESS_STORAGE_KEY, code.trim())
+      window.localStorage.setItem(
+        PHOTO_ACCESS_UUID_STORAGE_KEY,
+        String(payload.accessCodeUuid),
+      )
+      window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_STORAGE_KEY)
+      window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
       setIsPhotoRestricted(false)
       setShowAccessTip(false)
       setPendingRestrictedAction(null)
