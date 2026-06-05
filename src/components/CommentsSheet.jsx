@@ -135,10 +135,19 @@ function CommentsSheet({
       />
 
       <section className="relative flex max-h-[calc(100dvh-3rem)] min-h-[52vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
-        <header className="shrink-0 border-b border-zinc-200 px-4 py-3 text-center">
-          <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
+        <header className="relative shrink-0 border-b border-zinc-200 px-12 py-3 text-center">
+          <h2 className="truncate text-base font-semibold text-zinc-950">{title}</h2>
+        
+          <button
+            type="button"
+            aria-label="Close comments"
+            onClick={onClose}
+            className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-zinc-100 text-2xl leading-none text-zinc-950 transition hover:bg-zinc-200 active:scale-95"
+          >
+            ×
+          </button>
         </header>
-
+        
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex h-40 items-center justify-center">
