@@ -8,6 +8,7 @@ import { subscribeToPhotoUpdates } from './lib/subscribeToPhotoUpdates'
 import { trackAppOpen } from './lib/trackAppOpen'
 import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
+import { deletePhoto } from './lib/deletePhoto'
 import HeartMark from './components/HeartMark'
 import {
   PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
@@ -88,7 +89,7 @@ function App() {
         offset: 0,
       })
 
-      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
+      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile))
       setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
       setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
       setPendingNewPhotoIds([])
@@ -168,7 +169,7 @@ function App() {
           return
         }
 
-        setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
+        setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile))
         setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
         setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
       } catch (error) {
@@ -367,6 +368,7 @@ function App() {
           profileImage: uploadedPhoto.profileImageUrl || '',
           verified: Boolean(uploadedPhoto.uploaderVerified),
           commentsCount: uploadedPhoto.commentsCount ?? 0,
+          ownedByCurrentUser: true,
         },
         ...currentPhotos,
       ])
@@ -394,6 +396,7 @@ function App() {
         profileImage: uploadedPhoto.profileImageUrl || '',
         verified: Boolean(uploadedPhoto.uploaderVerified),
         commentsCount: uploadedPhoto.commentsCount ?? 0,
+        ownedByCurrentUser: true,
       },
       ...currentPhotos,
     ])
@@ -440,7 +443,7 @@ function App() {
 
       setFeedPhotos((currentPhotos) => [
         ...currentPhotos,
-        ...savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto),
+        ...savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile),
       ])
       setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
       setNextFeedOffset(
@@ -647,7 +650,32 @@ function App() {
   
     return result
   }
+
+  function mapSavedPhotoToFeedPhotoForCurrentProfile(photo) {
+    const mappedPhoto = mapSavedPhotoToFeedPhoto(photo)
   
+    return {
+      ...mappedPhoto,
+      ownedByCurrentUser:
+        Boolean(mappedPhoto.authorId) &&
+        Boolean(currentProfile.uuid) &&
+        mappedPhoto.authorId === currentProfile.uuid &&
+        !isAnonymousProfile(currentProfile),
+    }
+  }
+
+  async function handleDeletePhoto(photoId) {
+    const deletedPhoto = await deletePhoto(photoId)
+  
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.filter((photo) => photo.id !== deletedPhoto.id),
+    )
+  
+    setNextFeedOffset((currentOffset) => Math.max(currentOffset - 1, 0))
+  
+    return deletedPhoto
+  }
+    
   if (isRestoringSession) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 px-6">
@@ -753,6 +781,7 @@ function App() {
         onLogout={handleLogout}
         accessCodeInput={accessCodeInput}
         onAccessCodeInputChange={setAccessCodeInput}
+        onDeletePhoto={handleDeletePhoto}
       />
     ),
   }
