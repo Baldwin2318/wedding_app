@@ -80,6 +80,10 @@ function CommentsSheet({
   const [editingComment, setEditingComment] = useState(null)
   const inputRef = useRef(null)
 
+  if (!post) {
+    return null
+  }
+  
   const trimmedDraft = draft.trim()
   const title = useMemo(() => {
     const count = comments.length
