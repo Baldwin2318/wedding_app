@@ -192,11 +192,11 @@ function CommentsSheet({
             </button>
           </div>
         ) : null}
-
-        <form
-          className="keyboard-safe-bottom flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white p-3"
-          onSubmit={handleSubmit}
-        >
+        
+          <form
+            className="keyboard-safe-bottom flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            onSubmit={handleSubmit}
+          >
           <ProfileAvatar
             src={currentProfile?.urlProfilePic || ''}
             name={currentProfile?.name || 'Guest'}
