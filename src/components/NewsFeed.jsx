@@ -9,6 +9,8 @@ import ProfileSettings from './ProfileSettings'
 import { saveProfile } from '../lib/saveProfile'
 import FeedSkeletonCard from './FeedSkeletonCard'
 import VerifiedBadge from './VerifiedBadge'
+import CommentIcon from './CommentIcon'
+import CommentsSheet from './CommentsSheet'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -86,6 +88,10 @@ function NewsFeed({
   onLoadMorePhotos,
   onRefreshPhotos,
   onTogglePhotoLike,
+  onLoadPhotoComments,
+  onAddPhotoComment,
+  onUpdatePhotoComment,
+  onDeletePhotoComment,
   onUploadPhoto,
   pendingNewPhotoCount = 0,
   requestPhotoAccess,
@@ -134,6 +140,11 @@ function NewsFeed({
   const profileHistoryDisposeRef = useRef(null)
   const photoHistoryDisposeRef = useRef(null)
   const profileSettingsHistoryDisposeRef = useRef(null)
+  const [commentSheetPost, setCommentSheetPost] = useState(null)
+  const [commentsByPhotoId, setCommentsByPhotoId] = useState({})
+  const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [commentsError, setCommentsError] = useState('')
 
   useEffect(() => {
     return () => {
@@ -407,6 +418,107 @@ function NewsFeed({
     if (remainingScrollDistance <= 240) {
       isRequestingMoreRef.current = true
       onLoadMorePhotos?.()
+    }
+  }
+
+  async function openComments(post) {
+    setCommentSheetPost(post)
+    setCommentsError('')
+  
+    if (commentsByPhotoId[post.id]) {
+      return
+    }
+  
+    try {
+      setIsLoadingComments(true)
+      const comments = await onLoadPhotoComments?.(post.id)
+      setCommentsByPhotoId((current) => ({
+        ...current,
+        [post.id]: comments || [],
+      }))
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : 'Failed to load comments.',
+      )
+    } finally {
+      setIsLoadingComments(false)
+    }
+  }
+  
+  async function handleSubmitComment(body) {
+    if (!commentSheetPost) {
+      return
+    }
+  
+    try {
+      setIsSubmittingComment(true)
+      setCommentsError('')
+      const comment = await onAddPhotoComment?.(commentSheetPost.id, body)
+  
+      setCommentsByPhotoId((current) => ({
+        ...current,
+        [commentSheetPost.id]: [...(current[commentSheetPost.id] || []), comment],
+      }))
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : 'Failed to add comment.',
+      )
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+  
+  async function handleEditComment(commentId, body) {
+    if (!commentSheetPost) {
+      return
+    }
+  
+    try {
+      setIsSubmittingComment(true)
+      setCommentsError('')
+      const updatedComment = await onUpdatePhotoComment?.(
+        commentSheetPost.id,
+        commentId,
+        body,
+      )
+  
+      setCommentsByPhotoId((current) => ({
+        ...current,
+        [commentSheetPost.id]: (current[commentSheetPost.id] || []).map((comment) =>
+          comment.id === updatedComment.id ? updatedComment : comment,
+        ),
+      }))
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : 'Failed to update comment.',
+      )
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+  
+  async function handleDeleteComment(comment) {
+    if (!commentSheetPost) {
+      return
+    }
+  
+    try {
+      setIsSubmittingComment(true)
+      setCommentsError('')
+      await onDeletePhotoComment?.(commentSheetPost.id, comment.id)
+  
+      setCommentsByPhotoId((current) => ({
+        ...current,
+        [commentSheetPost.id]: (current[commentSheetPost.id] || []).filter(
+          (currentComment) => currentComment.id !== comment.id,
+        ),
+      }))
+    } catch (error) {
+      setCommentsError(
+        error instanceof Error ? error.message : 'Failed to delete comment.',
+      )
+    } finally {
+      setIsSubmittingComment(false)
     }
   }
 
@@ -689,23 +801,34 @@ function NewsFeed({
                          </span>
                         </div>
                       </button>
-                      <button
-                        type="button"
-                        className={`inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium transition ${
-                          canLikePhotos
-                            ? 'text-zinc-950 hover:opacity-80'
-                            : 'cursor-not-allowed opacity-40 text-zinc-950'
-                        }`}
-                        onClick={() =>
-                          canLikePhotos &&
-                          handleLike(post.id, isPersistedPhoto, isLiked, likeCount)
-                        }
-                        disabled={!canLikePhotos}
-                        aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
-                      >
-                        <HeartIcon isLiked={isLiked} />
-                        {showLikeCount ? <span>{likeCount}</span> : null}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium text-zinc-950 transition hover:opacity-80"
+                          onClick={() => openComments(post)}
+                          aria-label="Open comments"
+                          >
+                          <CommentIcon />
+                          {Number(post.commentsCount) > 0 ? <span>{post.commentsCount}</span> : null}
+                        </button>
+                        <button
+                          type="button"
+                          className={`inline-flex items-center gap-2 bg-transparent px-1 py-1 text-sm font-medium transition ${
+                            canLikePhotos
+                              ? 'text-zinc-950 hover:opacity-80'
+                              : 'cursor-not-allowed opacity-40 text-zinc-950'
+                          }`}
+                          onClick={() =>
+                            canLikePhotos &&
+                            handleLike(post.id, isPersistedPhoto, isLiked, likeCount)
+                          }
+                          disabled={!canLikePhotos}
+                          aria-label={isLiked ? 'Unlike photo' : 'Like photo'}
+                        >
+                          <HeartIcon isLiked={isLiked} />
+                          {showLikeCount ? <span>{likeCount}</span> : null}
+                        </button>
+                      </div>
                     </div>
 
                     <p className="mt-3.5 text-left text-base leading-7 text-zinc-700">
@@ -864,7 +987,21 @@ function NewsFeed({
           onSelectPhoto={setSelectedPhoto}
         />
       ) : null}
-
+      
+      <CommentsSheet
+        post={commentSheetPost}
+        comments={commentSheetPost ? commentsByPhotoId[commentSheetPost.id] || [] : []}
+        isLoading={isLoadingComments}
+        isSubmitting={isSubmittingComment}
+        error={commentsError}
+        canComment={canLikePhotos}
+        currentProfile={currentProfile}
+        onClose={() => setCommentSheetPost(null)}
+        onSubmit={handleSubmitComment}
+        onEdit={handleEditComment}
+        onDelete={handleDeleteComment}
+      />
+      
       <ProfileSettings
         isOpen={isProfileSettingsOpen}
         profile={currentProfile}
