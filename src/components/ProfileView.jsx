@@ -26,7 +26,7 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
         <div className="mx-auto flex w-full max-w-[520px] items-center gap-3">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-2xl leading-none text-zinc-950 transition active:scale-95 hover:text-red-500"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-2xl leading-none text-zinc-950 transition active:scale-95 hover:text-zinc-500"
             onClick={onBack}
             aria-label="Back to feed"
           >
