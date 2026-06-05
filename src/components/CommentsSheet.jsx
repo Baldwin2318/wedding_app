@@ -125,10 +125,6 @@ function CommentsSheet({
     setDraft('')
   }
 
-  if (!post) {
-    return null
-  }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/35 px-4 backdrop-blur-[2px]">
       <button
