@@ -10,7 +10,7 @@ import { saveProfile } from '../lib/saveProfile'
 import FeedSkeletonCard from './FeedSkeletonCard'
 import VerifiedBadge from './VerifiedBadge'
 import CommentIcon from './CommentIcon'
-import CommentsSheet from './CommentsSheet'
+import CommentsSheet, { formatRelativeTime } from './CommentsSheet'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -848,6 +848,7 @@ function NewsFeed({
             const likeCount = optimisticLike?.likesCount ?? baseLikeCount
             const showLikeCount = likeCount > 0
             const canDeletePost = Boolean(post.ownedByCurrentUser && onDeletePhoto)
+            const postTime = formatRelativeTime(post.createdAt)
 
             return (
                 <article
@@ -936,6 +937,11 @@ function NewsFeed({
                            <span className="truncate">{post.author}</span>
                            {post.verified ? <VerifiedBadge /> : null}
                          </span>
+                         {postTime ? (
+                           <span className="mt-0.5 block text-xs font-medium text-zinc-500">
+                             {postTime}
+                           </span>
+                         ) : null}
                         </div>
                       </button>
                       <div className="flex items-center gap-3">
