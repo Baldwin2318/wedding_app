@@ -51,6 +51,31 @@ function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
   )
 }
 
+function VerifiedBadge({ className = 'h-[15px] w-[15px]' }) {
+  return (
+    <span
+      aria-label="Verified"
+      title="Verified"
+      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#0095f6] text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] ${className}`}
+    >
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-[10px] w-[10px]"
+        fill="none"
+      >
+        <path
+          d="M7.75 12.25 10.35 14.85 16.5 8.7"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="3.2"
+        />
+      </svg>
+    </span>
+  )
+}
+
 const dummyPosts = [
   {
     id: 'dummy-1',
@@ -682,9 +707,10 @@ function NewsFeed({
                           name={post.author}
                         />
                         <div className="min-w-0">
-                          <span className="block truncate text-sm font-semibold text-zinc-950">
-                            {post.author}
-                          </span>
+                         <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-zinc-950">
+                           <span className="truncate">{post.author}</span>
+                           {post.verified ? <VerifiedBadge /> : null}
+                         </span>
                         </div>
                       </button>
                       <button
