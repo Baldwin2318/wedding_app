@@ -1017,7 +1017,18 @@ function NewsFeed({
 
       <PhotoViewer
         photo={selectedPhoto}
+        canLikePhotos={canLikePhotos}
         onClose={closeSelectedPhoto}
+        onCommentClick={openComments}
+        onLikeClick={(photo) => {
+          const optimisticLike = optimisticLikes[photo.id]
+          const baseIsLiked = Boolean(photo.likedByCurrentVisitor)
+          const baseLikeCount = Number(photo.likesCount) || 0
+          const isLiked = optimisticLike?.isLiked ?? baseIsLiked
+          const likeCount = optimisticLike?.likesCount ?? baseLikeCount
+      
+          handleLike(photo.id, true, isLiked, likeCount)
+        }}
       />
     </section>
   )
