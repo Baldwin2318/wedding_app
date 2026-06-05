@@ -444,7 +444,7 @@ app.get('/api/photos', async (request, response) => {
           photo_captures.created_at,
           photo_captures.likes_count,
           photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor,
-          photo_captures.comments_count,
+          photo_captures.comments_count
         FROM photo_captures
         LEFT JOIN photo_capture_likes
           ON photo_capture_likes.photo_capture_id = photo_captures.id
