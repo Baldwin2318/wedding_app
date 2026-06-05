@@ -50,6 +50,7 @@ function App() {
   const [showAccessTip, setShowAccessTip] = useState(false)
   const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false)
   const [accessCodeError, setAccessCodeError] = useState('')
+  const [isAccessCodeErrorVisible, setIsAccessCodeErrorVisible] = useState(false)
   const [pendingRestrictedAction, setPendingRestrictedAction] = useState(null)
   const [currentProfile, setCurrentProfile] = useState(() => ({
     uuid: typeof window !== 'undefined'
@@ -109,6 +110,28 @@ function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [currentScreen])
+
+  useEffect(() => {
+    if (!accessCodeError) {
+      setIsAccessCodeErrorVisible(false)
+      return undefined
+    }
+
+    setIsAccessCodeErrorVisible(true)
+
+    const fadeTimer = window.setTimeout(() => {
+      setIsAccessCodeErrorVisible(false)
+    }, 2000)
+
+    const clearTimer = window.setTimeout(() => {
+      setAccessCodeError('')
+    }, 2600)
+
+    return () => {
+      window.clearTimeout(fadeTimer)
+      window.clearTimeout(clearTimer)
+    }
+  }, [accessCodeError])
 
   useEffect(() => {
     if (hasTrackedAppOpen) {
@@ -280,6 +303,13 @@ function App() {
   }
 
   function requestUploadAccess(action) {
+    if (isPhotoRestricted) {
+      setPendingRestrictedAction(() => action)
+      setAccessCodeError('')
+      setShowAccessTip(true)
+      return
+    }
+
     if (!canUsePersonalFeatures) {
       setPendingRestrictedAction(null)
       setAccessCodeError(
@@ -432,6 +462,7 @@ function App() {
   
       if (!payload.valid) {
         setAccessCodeError('Invalid access code.')
+        setShowAccessTip(true)
         return
       }
 
@@ -475,6 +506,7 @@ function App() {
       setAccessCodeError(
         error instanceof Error ? error.message : 'Failed to verify access code.',
       )
+      setShowAccessTip(true)
     } finally {
       setIsVerifyingAccessCode(false)
     }
@@ -493,6 +525,7 @@ function App() {
     setIsPhotoRestricted(true)
     setShowAccessTip(false)
     setAccessCodeError('')
+    setIsAccessCodeErrorVisible(false)
     setPendingRestrictedAction(null)
     setFeedPhotos((currentPhotos) =>
       currentPhotos.map((photo) => ({
@@ -535,17 +568,29 @@ function App() {
   }
   
   const screens = {
-    introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
+    introduction: (
+      <Introduction
+        onNext={() => requestUploadAccess(() => setCurrentScreen('guide'))}
+        onSkip={() => setCurrentScreen('feed')}
+        showAccessTip={showAccessTip}
+        accessCodeError={accessCodeError}
+        accessCodeErrorVisible={isAccessCodeErrorVisible}
+        isVerifyingAccessCode={isVerifyingAccessCode}
+        onAccessClick={handleAccessClick}
+        onCloseAccessTip={() => setShowAccessTip(false)}
+      />
+    ),
     guide: (
       <Guide  
         onNext={() => requestUploadAccess(openCameraScreen)}
         onViewFeed={() => setCurrentScreen('feed')}
         showAccessTip={showAccessTip}
         accessCodeError={accessCodeError}
+        accessCodeErrorVisible={isAccessCodeErrorVisible}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
-        canUseCamera={canUsePersonalFeatures}
+        canUseCamera={isPhotoRestricted || canUsePersonalFeatures}
       />
     ),
     camera: (
@@ -573,11 +618,13 @@ function App() {
         requestPhotoAccess={requestUploadAccess}
         showAccessTip={showAccessTip}
         accessCodeError={accessCodeError}
+        accessCodeErrorVisible={isAccessCodeErrorVisible}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
         onGoHome={() => setCurrentScreen('introduction')}
         currentProfile={currentProfile}
+        hasVerifiedAccess={!isPhotoRestricted && Boolean(currentProfile.uuid)}
         canEditProfile={canUsePersonalFeatures}
         canLikePhotos={!isPhotoRestricted && Boolean(currentProfile.uuid)}
         canUploadPhotos={canUsePersonalFeatures}

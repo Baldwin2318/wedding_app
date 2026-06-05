@@ -192,7 +192,10 @@ async function ensureDatabaseSchema() {
     INSERT INTO profiles (uuid, name)
     SELECT
       codes.uuid,
-      INITCAP(SPLIT_PART(codes.code, '_', 1))
+      CASE
+        WHEN LOWER(TRIM(codes.code)) = 'guest' THEN 'Guest'
+        ELSE INITCAP(SPLIT_PART(codes.code, '_', 1))
+      END
     FROM codes
     LEFT JOIN profiles
       ON profiles.uuid = codes.uuid
@@ -253,7 +256,13 @@ function getRequestVisitorIdentity(request) {
 }
 
 function getGuestNameFromAccessCode(code = '') {
-  const rawName = String(code).trim().split('_')[0]?.trim()
+  const normalizedCode = String(code).trim()
+
+  if (normalizedCode.toLowerCase() === 'guest') {
+    return 'Guest'
+  }
+
+  const rawName = normalizedCode.split('_')[0]?.trim()
 
   if (!rawName) {
     return 'Guest'

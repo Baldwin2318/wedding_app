@@ -6,9 +6,11 @@ function Guide({
   onViewFeed,
   showAccessTip = false,
   accessCodeError = '',
+  accessCodeErrorVisible = false,
   isVerifyingAccessCode = false,
   onAccessClick,
   onCloseAccessTip,
+  canUseCamera = true,
 }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12">
@@ -44,15 +46,6 @@ function Guide({
         </div>
       </section>
 
-      <button
-        type="button"
-        className="absolute bottom-6 left-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-white text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95"
-        onClick={onViewFeed}
-        aria-label="Go to news feed"
-      >
-        <MinimalHomeIcon className="h-6 w-6" />
-      </button>
-
       {showAccessTip ? (
         <div className="absolute right-6 bottom-24 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-left text-sm shadow-xl">
           <p className="mb-3 text-zinc-700">
@@ -60,7 +53,11 @@ function Guide({
           </p>
       
           {accessCodeError ? (
-            <p className="mb-3 text-xs font-medium text-red-600">
+            <p
+              className={`mb-3 text-xs font-medium text-red-600 transition-opacity duration-500 ${
+                accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
               {accessCodeError}
             </p>
           ) : null}
@@ -88,12 +85,28 @@ function Guide({
       
       <button
         type="button"
-        className="absolute right-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-zinc-950 text-white shadow-[0_8px_30px_rgba(0,0,0,0.14)] transition hover:scale-105 hover:bg-zinc-800 active:scale-95"
-        onClick={onNext}
-        aria-label="Go to camera"
+        className="absolute left-6 bottom-6 inline-flex h-14 w-14 items-center justify-center rounded-full border border-white bg-white text-zinc-950 shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition hover:scale-105 hover:bg-zinc-100 active:scale-95"
+        onClick={onViewFeed}
+        aria-label="Go to news feed"
       >
-        <MinimalCameraIcon className="h-6 w-6" />
+        <MinimalHomeIcon className="h-6 w-6" />
       </button>
+
+      <div className="absolute right-6 bottom-6 flex items-center gap-3">
+        <button
+          type="button"
+          className={`inline-flex h-14 w-14 items-center justify-center rounded-full border border-white text-white shadow-[0_8px_30px_rgba(0,0,0,0.14)] transition ${
+            canUseCamera
+              ? 'bg-zinc-950 hover:scale-105 hover:bg-zinc-800 active:scale-95'
+              : 'cursor-not-allowed bg-zinc-300 opacity-60'
+          }`}
+          onClick={onNext}
+          disabled={!canUseCamera}
+          aria-label="Go to camera"
+        >
+          <MinimalCameraIcon className="h-6 w-6" />
+        </button>
+      </div>
     </section>
   )
 }

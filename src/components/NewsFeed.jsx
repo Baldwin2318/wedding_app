@@ -90,13 +90,16 @@ function NewsFeed({
   requestPhotoAccess,
   showAccessTip = false,
   accessCodeError = '',
+  accessCodeErrorVisible = false,
   isVerifyingAccessCode = false,
   onAccessClick,
   onCloseAccessTip,
   onGoHome,
   currentProfile = null,
+  hasVerifiedAccess = false,
   canEditProfile = false,
   canLikePhotos = false,
+  canUploadPhotos = false,
   onProfileUpdated,
   onLogout,
 }) {
@@ -524,13 +527,17 @@ function NewsFeed({
             Happy Memories 🌺
           </button>
 
-          {canEditProfile ? (
+          {hasVerifiedAccess ? (
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-950 transition ${
+                  canUploadPhotos
+                    ? 'bg-zinc-100 hover:bg-zinc-200'
+                    : 'cursor-not-allowed bg-zinc-100 opacity-45'
+                }`}
                 onClick={handleOpenUploadPicker}
-                disabled={isUploading}
+                disabled={isUploading || !canUploadPhotos}
                 aria-label="Add photo"
               >
                 +
@@ -538,8 +545,13 @@ function NewsFeed({
 
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-950 transition ${
+                  canUploadPhotos
+                    ? 'bg-zinc-100 hover:bg-zinc-200'
+                    : 'cursor-not-allowed bg-zinc-100 opacity-45'
+                }`}
                 onClick={handleOpenCamera}
+                disabled={!canUploadPhotos}
                 aria-label="Take picture"
               >
                 <MinimalCameraIcon className="h-5 w-5" />
@@ -563,7 +575,11 @@ function NewsFeed({
               </p>
     
               {accessCodeError ? (
-                <p className="mb-3 text-xs font-medium text-red-600">
+                <p
+                  className={`mb-3 text-xs font-medium text-red-600 transition-opacity duration-500 ${
+                    accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
                   {accessCodeError}
                 </p>
               ) : null}
@@ -801,7 +817,7 @@ function NewsFeed({
         </div>
       ) : null}
 
-      {canEditProfile ? (
+      {hasVerifiedAccess ? (
         <button
           type="button"
           className="fixed bottom-6 right-5 z-30 inline-flex h-15 w-15 items-center justify-center rounded-full bg-white/88 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5 backdrop-blur-xl transition active:scale-95"
@@ -830,6 +846,7 @@ function NewsFeed({
         profile={currentProfile}
         isSaving={isSavingProfile}
         error={profileSaveError}
+        canEditProfile={canEditProfile}
         onClose={closeProfileSettings}
         onSave={handleSaveProfile}
         onLogout={onLogout}

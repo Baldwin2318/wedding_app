@@ -6,6 +6,7 @@ function ProfileSettings({
   profile = null,
   isSaving = false,
   error = '',
+  canEditProfile = true,
   onClose,
   onSave,
   onLogout,
@@ -83,8 +84,11 @@ function ProfileSettings({
           <div className="flex justify-center">
             <button
               type="button"
-              className="group relative inline-flex rounded-full text-left"
-              onClick={() => fileInputRef.current?.click()}
+              className={`group relative inline-flex rounded-full text-left ${
+                canEditProfile ? '' : 'cursor-not-allowed opacity-70'
+              }`}
+              onClick={() => canEditProfile && fileInputRef.current?.click()}
+              disabled={!canEditProfile}
               aria-label="Change profile picture"
             >
               <ProfileAvatar
@@ -113,8 +117,15 @@ function ProfileSettings({
               maxLength={40}
               onChange={(event) => setName(event.target.value)}
               placeholder="Your name"
+              disabled={!canEditProfile}
             />
           </div>
+
+          {!canEditProfile ? (
+            <p className="text-sm font-medium text-zinc-500">
+              Anonymous access cannot modify profile information.
+            </p>
+          ) : null}
 
           {error ? (
             <p className="text-sm font-medium text-red-600">
@@ -144,7 +155,7 @@ function ProfileSettings({
               type="button"
               className="rounded-full bg-zinc-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !canEditProfile}
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
