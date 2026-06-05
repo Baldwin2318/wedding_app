@@ -569,38 +569,42 @@ function NewsFeed({
           )}
     
           {showAccessTip ? (
-            <div className="absolute right-0 top-14 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-sm shadow-xl">
-              <p className="mb-3 text-zinc-700">
-                Uploading and taking pictures are restricted.
-              </p>
-    
-              {accessCodeError ? (
-                <p
-                  className={`mb-3 text-xs font-medium text-red-600 transition-opacity duration-500 ${
-                    accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  {accessCodeError}
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/25 px-5 backdrop-blur-md">
+              <div className="w-full max-w-[320px] rounded-[28px] border border-white/70 bg-white/85 p-5 text-center text-sm shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+                <p className="mb-4 font-medium text-zinc-800">
+                  Enter the pass code to continue.
                 </p>
-              ) : null}
-    
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100"
-                  onClick={onCloseAccessTip}
-                >
-                  Cancel
-                </button>
-    
-                <button
-                  type="button"
-                  className="rounded-full bg-zinc-950 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={onAccessClick}
-                  disabled={isVerifyingAccessCode}
-                >
-                  {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
-                </button>
+          
+                {accessCodeError ? (
+                  <p
+                    className={`mb-4 text-xs font-medium text-red-600 transition-opacity duration-500 ${
+                      accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    {accessCodeError}
+                  </p>
+                ) : null}
+          
+                <div className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white/70">
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 active:bg-zinc-200"
+                    onClick={onCloseAccessTip}
+                  >
+                    Cancel
+                  </button>
+          
+                  <div className="w-px bg-zinc-200" />
+          
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={onAccessClick}
+                    disabled={isVerifyingAccessCode}
+                  >
+                    {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
