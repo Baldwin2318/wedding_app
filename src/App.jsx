@@ -393,6 +393,7 @@ function App() {
         authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
         profileImage: uploadedPhoto.profileImageUrl || '',
         verified: Boolean(uploadedPhoto.uploaderVerified),
+        commentsCount: uploadedPhoto.commentsCount ?? 0,
       },
       ...currentPhotos,
     ])
