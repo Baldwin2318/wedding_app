@@ -813,7 +813,6 @@ app.delete('/api/photos/:id', async (request, response) => {
   const { id } = request.params
   const accessCodeUuid = getAccessCodeUuid(request)
   const visitorIdentity = getRequestVisitorIdentity(request)
-  const client = await pool.connect()
 
   if (!accessCodeUuid || isAnonymousAccessCodeUuid(accessCodeUuid)) {
     response.status(401).json({
@@ -822,6 +821,8 @@ app.delete('/api/photos/:id', async (request, response) => {
     })
     return
   }
+
+  const client = await pool.connect()
 
   try {
     await client.query('BEGIN')
@@ -966,7 +967,6 @@ app.post('/api/photos/:id/comments', async (request, response) => {
   const body = typeof request.body?.body === 'string' ? request.body.body.trim() : ''
   const accessCodeUuid = getAccessCodeUuid(request)
   const visitorIdentity = getRequestVisitorIdentity(request)
-  const client = await pool.connect()
 
   if (!accessCodeUuid) {
     response.status(401).json({
@@ -976,6 +976,8 @@ app.post('/api/photos/:id/comments', async (request, response) => {
     return
   }
 
+  const client = await pool.connect()
+  
   if (!body) {
     response.status(400).json({
       ok: false,
