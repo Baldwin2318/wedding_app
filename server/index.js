@@ -159,6 +159,28 @@ async function ensureDatabaseSchema() {
   `)
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS photo_capture_comments (
+      id BIGSERIAL PRIMARY KEY,
+      photo_capture_id BIGINT NOT NULL REFERENCES photo_captures(id) ON DELETE CASCADE,
+      visitor_identity TEXT NOT NULL,
+      profile_uuid TEXT REFERENCES profiles(uuid) ON DELETE SET NULL,
+      body TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `)
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS photo_capture_comments_photo_created_idx
+    ON photo_capture_comments (photo_capture_id, created_at ASC, id ASC);
+  `)
+
+  await pool.query(`
+    ALTER TABLE photo_captures
+    ADD COLUMN IF NOT EXISTS comments_count INTEGER NOT NULL DEFAULT 0;
+  `)
+  
+  await pool.query(`
     ALTER TABLE profiles
     ADD COLUMN IF NOT EXISTS uuid TEXT;
   `)
@@ -421,7 +443,8 @@ app.get('/api/photos', async (request, response) => {
           COALESCE(profiles.verified, FALSE) AS uploader_verified,
           photo_captures.created_at,
           photo_captures.likes_count,
-          photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor
+          photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor,
+          photo_captures.comments_count,
         FROM photo_captures
         LEFT JOIN photo_capture_likes
           ON photo_capture_likes.photo_capture_id = photo_captures.id
@@ -455,6 +478,7 @@ app.get('/api/photos', async (request, response) => {
         profileImageUrl: row.url_profile_pic,
         uploaderVerified: Boolean(row.uploader_verified),
         createdAt: row.created_at,
+        commentsCount: row.comments_count,
       })),
     })
   } catch (error) {
@@ -600,7 +624,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
           created_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
-        RETURNING id, object_key, image_url, caption, ip_address, uploader_name, created_at, likes_count
+        RETURNING id, object_key, image_url, caption, ip_address, uploader_name, created_at, likes_count, comments_count
       `,
       [objectKey, imageUrl, caption, ipAddress, visitorIdentity, uploaderName],
     )
@@ -618,6 +642,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       profileImageUrl,
       uploaderVerified,
       createdAt: result.rows[0].created_at,
+      commentsCount: result.rows[0].comments_count,
     })
 
     broadcastPhotoCreated({
