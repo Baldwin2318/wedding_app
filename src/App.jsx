@@ -618,7 +618,11 @@ function App() {
         accessCodeErrorVisible={isAccessCodeErrorVisible}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
-        onCloseAccessTip={() => setShowAccessTip(false)}
+        onCloseAccessTip={() => {
+          setShowAccessTip(false)
+          setAccessCodeInput('')
+          setAccessCodeError('')
+        }}
         accessCodeInput={accessCodeInput}
         onAccessCodeInputChange={setAccessCodeInput}  
       />
@@ -632,7 +636,11 @@ function App() {
         accessCodeErrorVisible={isAccessCodeErrorVisible}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
-        onCloseAccessTip={() => setShowAccessTip(false)}
+        onCloseAccessTip={() => {
+          setShowAccessTip(false)
+          setAccessCodeInput('')
+          setAccessCodeError('')
+        }}
         canUseCamera={isPhotoRestricted || canUsePersonalFeatures}
         accessCodeInput={accessCodeInput}
         onAccessCodeInputChange={setAccessCodeInput}
@@ -666,7 +674,11 @@ function App() {
         accessCodeErrorVisible={isAccessCodeErrorVisible}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
-        onCloseAccessTip={() => setShowAccessTip(false)}
+        onCloseAccessTip={() => {
+         setShowAccessTip(false)
+         setAccessCodeInput('')
+         setAccessCodeError('')
+        }}
         onGoHome={() => setCurrentScreen('introduction')}
         currentProfile={currentProfile}
         hasVerifiedAccess={!isPhotoRestricted && Boolean(currentProfile.uuid)}
