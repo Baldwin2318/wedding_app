@@ -79,10 +79,6 @@ function CommentsSheet({
   const [draft, setDraft] = useState('')
   const [editingComment, setEditingComment] = useState(null)
   const inputRef = useRef(null)
-
-  if (!post) {
-    return null
-  }
   
   const trimmedDraft = draft.trim()
   const title = useMemo(() => {
@@ -96,6 +92,11 @@ function CommentsSheet({
     setEditingComment(null)
   }, [post?.id])
 
+
+  if (!post) {
+    return null
+  }
+  
   function beginEdit(comment) {
     setEditingComment(comment)
     setDraft(comment.body || '')
