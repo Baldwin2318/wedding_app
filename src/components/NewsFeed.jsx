@@ -593,6 +593,29 @@ function NewsFeed({
     }
   }, [isProfileSettingsOpen, pushView])
 
+  useEffect(() => {
+    if (!selectedPhoto?.id) {
+      return
+    }
+  
+    const updatedPhoto = photos.find((photo) => photo.id === selectedPhoto.id)
+  
+    if (!updatedPhoto) {
+      return
+    }
+  
+    setSelectedPhoto((currentPhoto) =>
+      currentPhoto
+        ? {
+            ...currentPhoto,
+            ...updatedPhoto,
+            src: updatedPhoto.image,
+            alt: updatedPhoto.caption ?? 'Wedding photo',
+          }
+        : currentPhoto,
+    )
+  }, [photos, selectedPhoto?.id])
+  
   async function handleSaveProfile({ name, file }) {
     try {
       setIsSavingProfile(true)
