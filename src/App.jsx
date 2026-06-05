@@ -20,6 +20,7 @@ const PHOTO_PAGE_SIZE = 12
 const LEGACY_PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
 const LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY = 'wedding_photo_access_code_id'
 const ANONYMOUS_ACCESS_UUID = '4a2e7030-e779-4572-9868-5cb073d6a58d'
+const PHOTO_ACCESS_PROFILE_VERIFIED_STORAGE_KEY = 'wedding_photo_access_profile_verified'
 
 function isAnonymousProfile(profile) {
   return String(profile?.uuid || '').trim() === ANONYMOUS_ACCESS_UUID
@@ -35,6 +36,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     author: photo.uploaderName || 'Guest',
     authorId: photo.uploaderUuid || '',
     profileImage: photo.profileImageUrl || '',
+    verified: Boolean(photo.uploaderVerified),
   }
 }
 
@@ -263,7 +265,7 @@ function App() {
           window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
           window.localStorage.removeItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY)
           window.localStorage.removeItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY)
-          setCurrentProfile({ uuid: '', name: 'Guest', urlProfilePic: '' })
+          setCurrentProfile({ uuid: '', name: 'Guest', urlProfilePic: '', verified: false })
           setIsPhotoRestricted(true)
           setIsRestoringSession(false)
           return
@@ -281,6 +283,7 @@ function App() {
           uuid: savedAccessCodeUuid.trim(),
           name: payload.profile?.name || payload.guestName || 'Guest',
           urlProfilePic: payload.profile?.urlProfilePic || '',
+          verified: Boolean(payload.profile?.verified),
         }
         
         setCurrentProfile(restoredProfile)
@@ -355,6 +358,7 @@ function App() {
           author: uploadedPhoto.uploaderName || 'Guest',
           authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
           profileImage: uploadedPhoto.profileImageUrl || '',
+          verified: Boolean(uploadedPhoto.uploaderVerified),
         },
         ...currentPhotos,
       ])
@@ -380,6 +384,7 @@ function App() {
         author: uploadedPhoto.uploaderName || 'Guest',
         authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
         profileImage: uploadedPhoto.profileImageUrl || '',
+        verified: Boolean(uploadedPhoto.uploaderVerified),
       },
       ...currentPhotos,
     ])
@@ -491,6 +496,7 @@ function App() {
         uuid: String(payload.accessCodeUuid),
         name: payload.profile?.name || payload.guestName || 'Guest',
         urlProfilePic: payload.profile?.urlProfilePic || '',
+        verified: Boolean(payload.profile?.verified),
       }
       const isAnonymousLogin = isAnonymousProfile(nextProfile)
     
@@ -563,6 +569,7 @@ function App() {
       uuid: profile?.uuid || currentProfile.uuid || '',
       name: profile?.name || currentProfile.name || 'Guest',
       urlProfilePic: profile?.urlProfilePic || '',
+      verified: Boolean(profile?.verified ?? currentProfile.verified),
     }
 
     setCurrentProfile(nextProfile)
@@ -582,6 +589,7 @@ function App() {
               ...photo,
               author: nextProfile.name,
               profileImage: nextProfile.urlProfilePic,
+              verified: nextProfile.verified,
             }
           : photo,
       ),
