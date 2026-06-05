@@ -4,6 +4,7 @@ import HeartMark from './HeartMark'
 import PhotoViewer from './PhotoViewer'
 import ProfileAvatar from './ProfileAvatar'
 import ProfileView from './ProfileView'
+import useBrowserBackStack from '../hooks/useBrowserBackStack'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -110,6 +111,10 @@ function NewsFeed({
   const [optimisticLikes, setOptimisticLikes] = useState({})
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [selectedProfile, setSelectedProfile] = useState(null)
+  const { pushView } = useBrowserBackStack()
+  const uploadHistoryDisposeRef = useRef(null)
+  const profileHistoryDisposeRef = useRef(null)
+  const photoHistoryDisposeRef = useRef(null)
 
   useEffect(() => {
     return () => {
@@ -169,7 +174,36 @@ function NewsFeed({
     setSelectedProfile(post)
   }
 
+  function closeSelectedPhoto() {
+    if (photoHistoryDisposeRef.current) {
+      const dispose = photoHistoryDisposeRef.current
+      photoHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
+    setSelectedPhoto(null)
+  }
+
+  function closeSelectedProfile() {
+    if (profileHistoryDisposeRef.current) {
+      const dispose = profileHistoryDisposeRef.current
+      profileHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
+    setSelectedProfile(null)
+  }
+
   function clearSelectedUpload() {
+    if (uploadHistoryDisposeRef.current) {
+      const dispose = uploadHistoryDisposeRef.current
+      uploadHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
     if (selectedUploadPreviewUrl) {
       URL.revokeObjectURL(selectedUploadPreviewUrl)
     }
@@ -345,6 +379,56 @@ function NewsFeed({
       isRequestingMoreRef.current = false
     }
   }, [isLoadingMorePhotos])
+
+  useEffect(() => {
+    if (selectedUploadFile && !uploadHistoryDisposeRef.current) {
+      uploadHistoryDisposeRef.current = pushView('upload-modal', () => {
+        uploadHistoryDisposeRef.current = null
+        if (selectedUploadPreviewUrl) {
+          URL.revokeObjectURL(selectedUploadPreviewUrl)
+        }
+        setSelectedUploadFile(null)
+        setSelectedUploadCaption('')
+        setSelectedUploadPreviewUrl('')
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      })
+      return
+    }
+
+    if (!selectedUploadFile) {
+      uploadHistoryDisposeRef.current = null
+    }
+  }, [pushView, selectedUploadFile, selectedUploadPreviewUrl])
+
+  useEffect(() => {
+    if (selectedProfile && !profileHistoryDisposeRef.current) {
+      profileHistoryDisposeRef.current = pushView('profile-view', () => {
+        profileHistoryDisposeRef.current = null
+        setSelectedProfile(null)
+      })
+      return
+    }
+
+    if (!selectedProfile) {
+      profileHistoryDisposeRef.current = null
+    }
+  }, [pushView, selectedProfile])
+
+  useEffect(() => {
+    if (selectedPhoto && !photoHistoryDisposeRef.current) {
+      photoHistoryDisposeRef.current = pushView('photo-viewer', () => {
+        photoHistoryDisposeRef.current = null
+        setSelectedPhoto(null)
+      })
+      return
+    }
+
+    if (!selectedPhoto) {
+      photoHistoryDisposeRef.current = null
+    }
+  }, [pushView, selectedPhoto])
   
   return (
     <section className="fixed inset-0 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
@@ -621,14 +705,14 @@ function NewsFeed({
         <ProfileView
           profile={selectedProfile}
           posts={photos}
-          onBack={() => setSelectedProfile(null)}
+          onBack={closeSelectedProfile}
           onSelectPhoto={setSelectedPhoto}
         />
       ) : null}
 
       <PhotoViewer
         photo={selectedPhoto}
-        onClose={() => setSelectedPhoto(null)}
+        onClose={closeSelectedPhoto}
       />
     </section>
   )
