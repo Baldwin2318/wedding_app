@@ -135,10 +135,6 @@ function CommentsSheet({
       />
 
       <section className="relative flex max-h-[82vh] min-h-[52vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
-        <div className="flex justify-center pt-3">
-          <div className="h-1.5 w-11 rounded-full bg-zinc-300" />
-        </div>
-
         <header className="shrink-0 border-b border-zinc-200 px-4 py-3 text-center">
           <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
         </header>
