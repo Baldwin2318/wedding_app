@@ -58,6 +58,28 @@ function App() {
       : '',
   }))
 
+  async function refreshFeedPhotos({ showSkeleton = true } = {}) {
+    try {
+      if (showSkeleton) {
+        setIsInitialFeedLoading(true)
+      }
+
+      const savedPhotosPayload = await fetchSavedPhotos({
+        limit: PHOTO_PAGE_SIZE,
+        offset: 0,
+      })
+
+      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
+      setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
+      setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
+      setPendingNewPhotoIds([])
+    } finally {
+      if (showSkeleton) {
+        setIsInitialFeedLoading(false)
+      }
+    }
+  }
+
   useEffect(() => {
     function updateViewportMetrics() {
       const viewportHeight = window.visualViewport?.height || window.innerHeight
@@ -97,8 +119,10 @@ function App() {
   useEffect(() => {
     let isCancelled = false
 
-    fetchSavedPhotos({ limit: PHOTO_PAGE_SIZE, offset: 0 })
-      .then((savedPhotosPayload) => {
+    async function loadInitialFeed() {
+      try {
+        const savedPhotosPayload = await fetchSavedPhotos({ limit: PHOTO_PAGE_SIZE, offset: 0 })
+
         if (isCancelled) {
           return
         }
@@ -106,17 +130,18 @@ function App() {
         setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
         setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
         setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!isCancelled) {
           console.error('Failed to load saved photos:', error)
         }
-      })
-      .finally(() => {
+      } finally {
         if (!isCancelled) {
           setIsInitialFeedLoading(false)
         }
-      })
+      }
+    }
+
+    loadInitialFeed()
 
     return () => {
       isCancelled = true
@@ -224,6 +249,9 @@ function App() {
           urlProfilePic: payload.profile?.urlProfilePic || '',
         })
         setIsPhotoRestricted(false)
+        refreshFeedPhotos({ showSkeleton: false }).catch((error) => {
+          console.error('Failed to refresh feed after restored login:', error)
+        })
       } catch (error) {
         console.error('Failed to verify saved access code session:', error)
   
@@ -296,6 +324,10 @@ function App() {
   }
 
   async function handleTogglePhotoLike(photoId, shouldLike) {
+    if (isPhotoRestricted) {
+      return
+    }
+
     const likedPhoto = await togglePhotoLike(photoId, shouldLike)
 
     setFeedPhotos((currentPhotos) =>
@@ -312,20 +344,7 @@ function App() {
   }
 
   async function handleLoadNewPhotos() {
-    try {
-      setIsInitialFeedLoading(true)
-      const savedPhotosPayload = await fetchSavedPhotos({
-        limit: PHOTO_PAGE_SIZE,
-        offset: 0,
-      })
-
-      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhoto))
-      setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
-      setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
-      setPendingNewPhotoIds([])
-    } finally {
-      setIsInitialFeedLoading(false)
-    }
+    await refreshFeedPhotos({ showSkeleton: true })
   }
 
   async function handleLoadMorePhotos() {
@@ -423,6 +442,7 @@ function App() {
       setIsPhotoRestricted(false)
       setShowAccessTip(false)
       setPendingRestrictedAction(null)
+      await refreshFeedPhotos({ showSkeleton: true })
       
       actionToRun?.()
     } catch (error) {
@@ -435,7 +455,7 @@ function App() {
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
     window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
     window.localStorage.removeItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY)
     window.localStorage.removeItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY)
@@ -449,6 +469,13 @@ function App() {
     setShowAccessTip(false)
     setAccessCodeError('')
     setPendingRestrictedAction(null)
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.map((photo) => ({
+        ...photo,
+        likedByCurrentVisitor: false,
+      })),
+    )
+    await refreshFeedPhotos({ showSkeleton: true })
     setCurrentScreen('introduction')
   }
 
@@ -526,6 +553,7 @@ function App() {
         onGoHome={() => setCurrentScreen('introduction')}
         currentProfile={currentProfile}
         canEditProfile={!isPhotoRestricted && Boolean(currentProfile.uuid)}
+        canLikePhotos={!isPhotoRestricted && Boolean(currentProfile.uuid)}
         onProfileUpdated={handleProfileUpdated}
         onLogout={handleLogout}
       />
