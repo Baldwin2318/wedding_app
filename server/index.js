@@ -809,6 +809,342 @@ app.delete('/api/photos/:id/like', async (request, response) => {
   }
 })
 
+function getAccessCodeUuid(request) {
+  const accessCodeUuid = request.headers['x-access-code-uuid']
+
+  return typeof accessCodeUuid === 'string' && accessCodeUuid.trim()
+    ? accessCodeUuid.trim()
+    : ''
+}
+
+function mapCommentRow(row, currentVisitorIdentity) {
+  return {
+    id: String(row.id),
+    photoId: String(row.photo_capture_id),
+    body: row.body,
+    authorName: row.author_name || 'Guest',
+    authorUuid: row.profile_uuid || '',
+    authorProfileImageUrl: row.url_profile_pic || '',
+    authorVerified: Boolean(row.author_verified),
+    ownedByCurrentVisitor: row.visitor_identity === currentVisitorIdentity,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+app.get('/api/photos/:id/comments', async (request, response) => {
+  const { id } = request.params
+  const visitorIdentity = getRequestVisitorIdentity(request)
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT
+          photo_capture_comments.id,
+          photo_capture_comments.photo_capture_id,
+          photo_capture_comments.visitor_identity,
+          photo_capture_comments.profile_uuid,
+          photo_capture_comments.body,
+          photo_capture_comments.created_at,
+          photo_capture_comments.updated_at,
+          profiles.name AS author_name,
+          profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS author_verified
+        FROM photo_capture_comments
+        LEFT JOIN profiles
+          ON profiles.uuid = photo_capture_comments.profile_uuid
+        WHERE photo_capture_comments.photo_capture_id = $1
+        ORDER BY photo_capture_comments.created_at ASC, photo_capture_comments.id ASC
+      `,
+      [id],
+    )
+
+    response.status(200).json({
+      ok: true,
+      comments: result.rows.map((row) => mapCommentRow(row, visitorIdentity)),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to load comments.',
+    })
+  }
+})
+
+app.post('/api/photos/:id/comments', async (request, response) => {
+  const { id } = request.params
+  const body = typeof request.body?.body === 'string' ? request.body.body.trim() : ''
+  const accessCodeUuid = getAccessCodeUuid(request)
+  const visitorIdentity = getRequestVisitorIdentity(request)
+  const client = await pool.connect()
+
+  if (!accessCodeUuid) {
+    response.status(401).json({
+      ok: false,
+      error: 'Login is required to comment.',
+    })
+    return
+  }
+
+  if (!body) {
+    response.status(400).json({
+      ok: false,
+      error: 'Comment cannot be empty.',
+    })
+    return
+  }
+
+  if (body.length > 500) {
+    response.status(400).json({
+      ok: false,
+      error: 'Comment must be 500 characters or fewer.',
+    })
+    return
+  }
+
+  try {
+    await client.query('BEGIN')
+
+    const profileResult = await client.query(
+      `
+        SELECT uuid
+        FROM profiles
+        WHERE uuid = $1
+        LIMIT 1
+      `,
+      [accessCodeUuid],
+    )
+
+    if (profileResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Profile not found.',
+      })
+      return
+    }
+
+    const photoResult = await client.query(
+      `
+        SELECT id
+        FROM photo_captures
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [id],
+    )
+
+    if (photoResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Photo not found.',
+      })
+      return
+    }
+
+    const insertResult = await client.query(
+      `
+        INSERT INTO photo_capture_comments (
+          photo_capture_id,
+          visitor_identity,
+          profile_uuid,
+          body
+        )
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+      `,
+      [id, visitorIdentity, accessCodeUuid, body],
+    )
+
+    const countResult = await client.query(
+      `
+        UPDATE photo_captures
+        SET comments_count = COALESCE(comments_count, 0) + 1
+        WHERE id = $1
+        RETURNING comments_count
+      `,
+      [id],
+    )
+
+    const commentResult = await client.query(
+      `
+        SELECT
+          photo_capture_comments.id,
+          photo_capture_comments.photo_capture_id,
+          photo_capture_comments.visitor_identity,
+          photo_capture_comments.profile_uuid,
+          photo_capture_comments.body,
+          photo_capture_comments.created_at,
+          photo_capture_comments.updated_at,
+          profiles.name AS author_name,
+          profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS author_verified
+        FROM photo_capture_comments
+        LEFT JOIN profiles
+          ON profiles.uuid = photo_capture_comments.profile_uuid
+        WHERE photo_capture_comments.id = $1
+        LIMIT 1
+      `,
+      [insertResult.rows[0].id],
+    )
+
+    await client.query('COMMIT')
+
+    response.status(201).json({
+      ok: true,
+      commentsCount: countResult.rows[0].comments_count,
+      comment: mapCommentRow(commentResult.rows[0], visitorIdentity),
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to add comment.',
+    })
+  } finally {
+    client.release()
+  }
+})
+
+app.patch('/api/photos/:photoId/comments/:commentId', async (request, response) => {
+  const { photoId, commentId } = request.params
+  const body = typeof request.body?.body === 'string' ? request.body.body.trim() : ''
+  const visitorIdentity = getRequestVisitorIdentity(request)
+
+  if (!body) {
+    response.status(400).json({
+      ok: false,
+      error: 'Comment cannot be empty.',
+    })
+    return
+  }
+
+  if (body.length > 500) {
+    response.status(400).json({
+      ok: false,
+      error: 'Comment must be 500 characters or fewer.',
+    })
+    return
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        UPDATE photo_capture_comments
+        SET body = $1,
+            updated_at = NOW()
+        WHERE id = $2
+          AND photo_capture_id = $3
+          AND visitor_identity = $4
+        RETURNING id
+      `,
+      [body, commentId, photoId, visitorIdentity],
+    )
+
+    if (result.rowCount === 0) {
+      response.status(404).json({
+        ok: false,
+        error: 'Comment not found or you do not own this comment.',
+      })
+      return
+    }
+
+    const commentResult = await pool.query(
+      `
+        SELECT
+          photo_capture_comments.id,
+          photo_capture_comments.photo_capture_id,
+          photo_capture_comments.visitor_identity,
+          photo_capture_comments.profile_uuid,
+          photo_capture_comments.body,
+          photo_capture_comments.created_at,
+          photo_capture_comments.updated_at,
+          profiles.name AS author_name,
+          profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS author_verified
+        FROM photo_capture_comments
+        LEFT JOIN profiles
+          ON profiles.uuid = photo_capture_comments.profile_uuid
+        WHERE photo_capture_comments.id = $1
+        LIMIT 1
+      `,
+      [commentId],
+    )
+
+    response.status(200).json({
+      ok: true,
+      comment: mapCommentRow(commentResult.rows[0], visitorIdentity),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to update comment.',
+    })
+  }
+})
+
+app.delete('/api/photos/:photoId/comments/:commentId', async (request, response) => {
+  const { photoId, commentId } = request.params
+  const visitorIdentity = getRequestVisitorIdentity(request)
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const deleteResult = await client.query(
+      `
+        DELETE FROM photo_capture_comments
+        WHERE id = $1
+          AND photo_capture_id = $2
+          AND visitor_identity = $3
+        RETURNING id
+      `,
+      [commentId, photoId, visitorIdentity],
+    )
+
+    if (deleteResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Comment not found or you do not own this comment.',
+      })
+      return
+    }
+
+    const countResult = await client.query(
+      `
+        UPDATE photo_captures
+        SET comments_count = GREATEST(COALESCE(comments_count, 0) - 1, 0)
+        WHERE id = $1
+        RETURNING comments_count
+      `,
+      [photoId],
+    )
+
+    await client.query('COMMIT')
+
+    response.status(200).json({
+      ok: true,
+      id: String(commentId),
+      photoId: String(photoId),
+      commentsCount: countResult.rows[0].comments_count,
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to delete comment.',
+    })
+  } finally {
+    client.release()
+  }
+})
+
 app.post('/api/access-codes/verify', async (request, response) => {
   const code = typeof request.body?.code === 'string' ? request.body.code.trim() : ''
 
