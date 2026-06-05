@@ -111,6 +111,7 @@ function NewsFeed({
   onLogout,
   accessCodeInput = '',
   onAccessCodeInputChange,
+  onDeletePhoto,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -146,6 +147,8 @@ function NewsFeed({
   const [isLoadingComments, setIsLoadingComments] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentsError, setCommentsError] = useState('')
+  const [openPostMenuId, setOpenPostMenuId] = useState(null)
+  const [deletingPostIds, setDeletingPostIds] = useState({})
 
   useEffect(() => {
     return () => {
@@ -533,7 +536,52 @@ function NewsFeed({
       setIsSubmittingComment(false)
     }
   }
-
+  
+  async function handleDeletePost(post) {
+    if (!post?.id || deletingPostIds[post.id]) {
+      return
+    }
+  
+    const confirmed = window.confirm(
+      'Are you sure you want to permanently delete this post?',
+    )
+  
+    if (!confirmed) {
+      setOpenPostMenuId(null)
+      return
+    }
+  
+    try {
+      setDeletingPostIds((current) => ({
+        ...current,
+        [post.id]: true,
+      }))
+      setOpenPostMenuId(null)
+      await onDeletePhoto?.(post.id)
+  
+      if (selectedPhoto?.id === post.id) {
+        setSelectedPhoto(null)
+      }
+  
+      if (selectedProfile?.id === post.id) {
+        setSelectedProfile(null)
+      }
+  
+      if (commentSheetPost?.id === post.id) {
+        setCommentSheetPost(null)
+      }
+    } catch (error) {
+      console.error('Failed to delete post:', error)
+      window.alert(error instanceof Error ? error.message : 'Failed to delete post.')
+    } finally {
+      setDeletingPostIds((current) => {
+        const next = { ...current }
+        delete next[post.id]
+        return next
+      })
+    }
+}
+  
   useEffect(() => {
     if (!isLoadingMorePhotos) {
       isRequestingMoreRef.current = false
@@ -816,18 +864,54 @@ function NewsFeed({
                     key={post.id}
                     className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
                   >
-                  <img
-                    className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
-                    src={post.image}
-                    alt={post.caption ?? "Wedding photo"}
-                    onClick={() =>
-                      setSelectedPhoto({
-                        ...post,
-                        src: post.image,
-                        alt: post.caption ?? 'Wedding photo',
-                      })
-                    }
-                  />
+                    <div className="relative">
+                      <img
+                        className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
+                        src={post.image}
+                        alt={post.caption ?? 'Wedding photo'}
+                        onClick={() =>
+                          setSelectedPhoto({
+                            ...post,
+                            src: post.image,
+                            alt: post.caption ?? 'Wedding photo',
+                          })
+                        }
+                      />
+                    
+                      {post.ownedByCurrentUser ? (
+                        <div className="absolute right-3 top-3">
+                          <button
+                            type="button"
+                            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-xl font-bold leading-none text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] backdrop-blur-md transition active:scale-95"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setOpenPostMenuId((currentId) =>
+                                currentId === post.id ? null : post.id,
+                              )
+                            }}
+                            aria-label="Open post menu"
+                          >
+                            ⋯
+                          </button>
+                    
+                          {openPostMenuId === post.id ? (
+                            <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-sm shadow-[0_16px_45px_rgba(0,0,0,0.18)]">
+                              <button
+                                type="button"
+                                className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={Boolean(deletingPostIds[post.id])}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleDeletePost(post)
+                                }}
+                              >
+                                {deletingPostIds[post.id] ? 'Deleting...' : 'Delete post'}
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
 
                   <div className="px-[18px] pt-4 pb-[18px]">
                     <div className="flex items-center justify-between gap-3">
