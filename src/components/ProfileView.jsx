@@ -1,4 +1,5 @@
 import ProfileAvatar from './ProfileAvatar'
+import VerifiedBadge from './VerifiedBadge'
 
 function getPostAuthorKey(post) {
   return String(post?.authorId || post?.userId || post?.author || '').trim().toLowerCase()
@@ -17,6 +18,7 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
   const userPosts = posts.filter((post) => getPostAuthorKey(post) === profileKey)
   const profileName = profile.author || profile.name || 'Guest'
   const profileImage = getProfileImage(profile)
+  const isVerified = Boolean(profile.verified)
 
   return (
     <section className="fixed inset-0 z-30 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
@@ -30,9 +32,10 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
           >
             ‹
           </button>
-          <h1 className="truncate text-base font-semibold text-zinc-950">
-            {profileName}
-          </h1>
+            <h1 className="flex min-w-0 items-center gap-1.5 text-base font-semibold text-zinc-950">
+              <span className="truncate">{profileName}</span>
+              {isVerified ? <VerifiedBadge /> : null}
+            </h1>
         </div>
       </header>
 
@@ -42,8 +45,11 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
             <div className="flex items-center gap-5">
               <ProfileAvatar src={profileImage} name={profileName} className="h-20 w-20" />
               <div className="min-w-0 flex-1">
-                <h2 className="truncate text-2xl font-semibold text-zinc-950">
-                  {profileName}
+                <h2 className="flex min-w-0 items-center gap-2 text-2xl font-semibold text-zinc-950">
+                  <span className="truncate">{profileName}</span>
+                  {isVerified ? (
+                    <VerifiedBadge className="h-[19px] w-[19px]" checkClassName="h-[13px] w-[13px]" />
+                  ) : null}
                 </h2>
                 <p className="mt-1 text-sm font-medium text-zinc-500">
                   {userPosts.length === 1 ? '1 post' : `${userPosts.length} posts`}
