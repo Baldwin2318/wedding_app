@@ -129,7 +129,7 @@ function CommentsSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/35 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/35 px-4 backdrop-blur-[2px]">
       <button
         type="button"
         aria-label="Close comments"
@@ -137,7 +137,7 @@ function CommentsSheet({
         onClick={onClose}
       />
 
-      <section className="relative flex max-h-[82vh] min-h-[52vh] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[32px] bg-white shadow-[0_-20px_70px_rgba(0,0,0,0.25)]">
+      <section className="relative flex max-h-[82vh] min-h-[52vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
         <div className="flex justify-center pt-3">
           <div className="h-1.5 w-11 rounded-full bg-zinc-300" />
         </div>
