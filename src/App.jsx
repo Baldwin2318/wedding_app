@@ -78,7 +78,7 @@ function App() {
   }))
   const canUsePersonalFeatures = !isPhotoRestricted && Boolean(currentProfile.uuid) && !isAnonymousProfile(currentProfile)
 
-  async function refreshFeedPhotos({ showSkeleton = true } = {}) {
+   async function refreshFeedPhotos({ showSkeleton = true, profile = currentProfile } = {}) {
     try {
       if (showSkeleton) {
         setIsInitialFeedLoading(true)
@@ -89,7 +89,9 @@ function App() {
         offset: 0,
       })
 
-      setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile))
+      setFeedPhotos(savedPhotosPayload.photos.map((photo) =>
+        mapSavedPhotoToFeedPhotoForProfile(photo, profile),
+      ))
       setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
       setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
       setPendingNewPhotoIds([])
@@ -168,8 +170,10 @@ function App() {
         if (isCancelled) {
           return
         }
-
-        setFeedPhotos(savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile))
+        
+        setFeedPhotos(savedPhotosPayload.photos.map((photo) =>
+          mapSavedPhotoToFeedPhotoForProfile(photo),
+        ))
         setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
         setNextFeedOffset(savedPhotosPayload.nextOffset || savedPhotosPayload.photos.length)
       } catch (error) {
@@ -302,7 +306,7 @@ function App() {
         }
         
         setIsRestoringSession(false)
-        refreshFeedPhotos({ showSkeleton: false }).catch((error) => {
+        refreshFeedPhotos({ showSkeleton: false, profile: restoredProfile }).catch((error) => {
           console.error('Failed to refresh feed after restored login:', error)
         })
       } catch (error) {
@@ -443,7 +447,9 @@ function App() {
 
       setFeedPhotos((currentPhotos) => [
         ...currentPhotos,
-        ...savedPhotosPayload.photos.map(mapSavedPhotoToFeedPhotoForCurrentProfile),
+        ...savedPhotosPayload.photos.map((photo) =>
+          mapSavedPhotoToFeedPhotoForProfile(photo),
+        ),
       ])
       setHasMoreFeedPhotos(savedPhotosPayload.hasMore)
       setNextFeedOffset(
@@ -531,7 +537,7 @@ function App() {
       setShowAccessTip(false)
       setAccessCodeInput('')
       setPendingRestrictedAction(null)
-      await refreshFeedPhotos({ showSkeleton: true })
+      await refreshFeedPhotos({ showSkeleton: true, profile: nextProfile })
       
       if (!isAnonymousLogin) {
         if (actionToRun) {
@@ -651,16 +657,16 @@ function App() {
     return result
   }
 
-  function mapSavedPhotoToFeedPhotoForCurrentProfile(photo) {
+  function mapSavedPhotoToFeedPhotoForProfile(photo, profile = currentProfile) {
     const mappedPhoto = mapSavedPhotoToFeedPhoto(photo)
   
     return {
       ...mappedPhoto,
       ownedByCurrentUser:
         Boolean(mappedPhoto.authorId) &&
-        Boolean(currentProfile.uuid) &&
-        mappedPhoto.authorId === currentProfile.uuid &&
-        !isAnonymousProfile(currentProfile),
+        Boolean(profile.uuid) &&
+        mappedPhoto.authorId === profile.uuid &&
+        !isAnonymousProfile(profile),
     }
   }
 
