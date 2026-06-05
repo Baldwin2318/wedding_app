@@ -18,6 +18,11 @@ let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
 const LEGACY_PHOTO_ACCESS_STORAGE_KEY = 'wedding_photo_access_code'
 const LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY = 'wedding_photo_access_code_id'
+const ANONYMOUS_ACCESS_UUID = '4a2e7030-e779-4572-9868-5cb073d6a58d'
+
+function isAnonymousProfile(profile) {
+  return String(profile?.uuid || '').trim() === ANONYMOUS_ACCESS_UUID
+}
 
 function mapSavedPhotoToFeedPhoto(photo) {
   return {
@@ -57,6 +62,7 @@ function App() {
       ? window.localStorage.getItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY) || ''
       : '',
   }))
+  const canUsePersonalFeatures = !isPhotoRestricted && Boolean(currentProfile.uuid) && !isAnonymousProfile(currentProfile)
 
   async function refreshFeedPhotos({ showSkeleton = true } = {}) {
     try {
@@ -273,6 +279,21 @@ function App() {
     setCurrentScreen('camera')
   }
 
+  function requestUploadAccess(action) {
+    if (!canUsePersonalFeatures) {
+      setPendingRestrictedAction(null)
+      setAccessCodeError(
+        isAnonymousProfile(currentProfile)
+          ? 'Anonymous access can view memories but cannot upload photos.'
+          : '',
+      )
+      setShowAccessTip(true)
+      return
+    }
+
+    action()
+  }
+
   async function handleCameraDone(photo) {
     if (photo?.image) {
       const uploadedPhoto = await uploadCapturedPhoto({
@@ -419,24 +440,26 @@ function App() {
       }
       
       const actionToRun = pendingRestrictedAction
-    
-      window.localStorage.setItem(
-        PHOTO_ACCESS_UUID_STORAGE_KEY,
-        String(payload.accessCodeUuid),
-      )
-      window.localStorage.setItem(
-        PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
-        payload.guestName || 'Guest',
-      )
-      window.localStorage.setItem(
-        PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
-        payload.profile?.urlProfilePic || '',
-      )
-      setCurrentProfile({
+      const nextProfile = {
         uuid: String(payload.accessCodeUuid),
         name: payload.profile?.name || payload.guestName || 'Guest',
         urlProfilePic: payload.profile?.urlProfilePic || '',
-      })
+      }
+      const isAnonymousLogin = isAnonymousProfile(nextProfile)
+    
+      window.localStorage.setItem(
+        PHOTO_ACCESS_UUID_STORAGE_KEY,
+        nextProfile.uuid,
+      )
+      window.localStorage.setItem(
+        PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+        nextProfile.name,
+      )
+      window.localStorage.setItem(
+        PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
+        nextProfile.urlProfilePic,
+      )
+      setCurrentProfile(nextProfile)
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_STORAGE_KEY)
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
       setIsPhotoRestricted(false)
@@ -444,7 +467,9 @@ function App() {
       setPendingRestrictedAction(null)
       await refreshFeedPhotos({ showSkeleton: true })
       
-      actionToRun?.()
+      if (!isAnonymousLogin) {
+        actionToRun?.()
+      }
     } catch (error) {
       console.error('Failed to verify access code:', error)
       setAccessCodeError(
@@ -513,13 +538,14 @@ function App() {
     introduction: <Introduction onNext={() => setCurrentScreen('guide')} />,
     guide: (
       <Guide  
-        onNext={() => requestPhotoAccess(openCameraScreen)}
+        onNext={() => requestUploadAccess(openCameraScreen)}
         onViewFeed={() => setCurrentScreen('feed')}
         showAccessTip={showAccessTip}
         accessCodeError={accessCodeError}
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
+        canUseCamera={canUsePersonalFeatures}
       />
     ),
     camera: (
@@ -537,14 +563,14 @@ function App() {
         isInitialLoadingPhotos={isInitialFeedLoading}
         isLoadingMorePhotos={isLoadingMoreFeedPhotos}
         photos={feedPhotos}
-        onAddPhoto={() => requestPhotoAccess(openCameraScreen)}
+        onAddPhoto={() => requestUploadAccess(openCameraScreen)}
         onLoadNewPhotos={handleLoadNewPhotos}
         onLoadMorePhotos={handleLoadMorePhotos}
         onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
         pendingNewPhotoCount={pendingNewPhotoIds.length}
         onUploadPhoto={handleSelectedPhotoUpload}
-        requestPhotoAccess={requestPhotoAccess}
+        requestPhotoAccess={requestUploadAccess}
         showAccessTip={showAccessTip}
         accessCodeError={accessCodeError}
         isVerifyingAccessCode={isVerifyingAccessCode}
@@ -552,8 +578,9 @@ function App() {
         onCloseAccessTip={() => setShowAccessTip(false)}
         onGoHome={() => setCurrentScreen('introduction')}
         currentProfile={currentProfile}
-        canEditProfile={!isPhotoRestricted && Boolean(currentProfile.uuid)}
+        canEditProfile={canUsePersonalFeatures}
         canLikePhotos={!isPhotoRestricted && Boolean(currentProfile.uuid)}
+        canUploadPhotos={canUsePersonalFeatures}
         onProfileUpdated={handleProfileUpdated}
         onLogout={handleLogout}
       />
