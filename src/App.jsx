@@ -437,8 +437,9 @@ function App() {
   
   async function handleAccessClick() {
     const code = window.prompt('Enter the access code')
+    const normalizedCode = code?.trim().toLowerCase() || ''
   
-    if (!code?.trim()) {
+    if (!normalizedCode) {
       return
     }
   
@@ -451,7 +452,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify({ code: normalizedCode }),
       })
   
       const payload = await response.json()
