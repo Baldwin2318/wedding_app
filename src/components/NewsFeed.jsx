@@ -579,47 +579,6 @@ function NewsFeed({
           onTouchStart={handleTouchStart}
           onWheel={handleWheel}
         >
-
-          {showAccessTip ? (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/25 px-5 backdrop-blur-md">
-              <div className="w-full max-w-[320px] rounded-[28px] border border-white/70 bg-white/85 p-5 text-center text-sm shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-                <p className="mb-4 font-medium text-zinc-800">
-                  Enter the pass code to continue.
-                </p>
-          
-                {accessCodeError ? (
-                  <p
-                    className={`mb-4 text-xs font-medium text-red-600 transition-opacity duration-500 ${
-                      accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  >
-                    {accessCodeError}
-                  </p>
-                ) : null}
-          
-                <div className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white/70">
-                  <button
-                    type="button"
-                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 active:bg-zinc-200"
-                    onClick={onCloseAccessTip}
-                  >
-                    Cancel
-                  </button>
-          
-                  <div className="w-px bg-zinc-200" />
-          
-                  <button
-                    type="button"
-                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => requestPhotoAccess?.()}
-                    disabled={isVerifyingAccessCode}
-                  >
-                    {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
           
           {isInitialLoadingPhotos ? (
             <>
@@ -768,6 +727,47 @@ function NewsFeed({
         </div>
       </div>
 
+          {showAccessTip ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/25 px-5 backdrop-blur-md">
+              <div className="w-full max-w-[320px] rounded-[28px] border border-white/70 bg-white/85 p-5 text-center text-sm shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+                <p className="mb-4 font-medium text-zinc-800">
+                  Enter the pass code to continue.
+                </p>
+          
+                {accessCodeError ? (
+                  <p
+                    className={`mb-4 text-xs font-medium text-red-600 transition-opacity duration-500 ${
+                      accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    {accessCodeError}
+                  </p>
+                ) : null}
+          
+                <div className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white/70">
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 active:bg-zinc-200"
+                    onClick={onCloseAccessTip}
+                  >
+                    Cancel
+                  </button>
+          
+                  <div className="w-px bg-zinc-200" />
+          
+                  <button
+                    type="button"
+                    className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={onAccessClick}
+                    disabled={isVerifyingAccessCode}
+                  >
+                    {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+      
       {selectedUploadFile ? (
         <div className="keyboard-safe-bottom absolute inset-0 z-20 flex items-start justify-center overflow-y-auto bg-zinc-950/40 px-4 py-6 backdrop-blur-[2px] sm:items-center">
           <div className="w-full max-w-[420px] overflow-hidden rounded-[28px] border border-zinc-950 bg-white shadow-[0_24px_80px_rgba(17,24,39,0.18)]">
