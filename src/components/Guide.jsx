@@ -11,6 +11,8 @@ function Guide({
   onAccessClick,
   onCloseAccessTip,
   canUseCamera = true,
+ accessCodeInput = '',
+  onAccessCodeInputChange,
 }) {
   return (
     <section className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12">
@@ -60,6 +62,21 @@ function Guide({
                 Enter your wedding passcode to take or upload photos.
               </p>
 
+              <input
+                type="password"
+                value={accessCodeInput}
+                onChange={(event) => onAccessCodeInputChange?.(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    onAccessClick?.()
+                  }
+                }}
+                className="mb-4 w-full rounded-2xl border border-zinc-200 bg-white/80 px-4 py-3 text-center text-base font-medium text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10"
+                placeholder="Pass code"
+                autoComplete="current-password"
+                autoFocus
+              />
+              
               {accessCodeError ? (
                 <p
                   className={`mt-4 text-sm font-medium text-red-600 transition-opacity duration-500 ${
