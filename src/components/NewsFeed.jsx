@@ -8,6 +8,7 @@ import useBrowserBackStack from '../hooks/useBrowserBackStack'
 import ProfileSettings from './ProfileSettings'
 import { saveProfile } from '../lib/saveProfile'
 import FeedSkeletonCard from './FeedSkeletonCard'
+import VerifiedBadge from './VerifiedBadge'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -48,31 +49,6 @@ function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
         strokeWidth="1.8"
       />
     </svg>
-  )
-}
-
-function VerifiedBadge({ className = 'h-[15px] w-[15px]' }) {
-  return (
-    <span
-      aria-label="Verified"
-      title="Verified"
-      className={`inline-flex shrink-0 items-center justify-center rounded-full bg-[#0095f6] text-white shadow-[0_1px_2px_rgba(0,0,0,0.18)] ${className}`}
-    >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 24 24"
-        className="h-[10px] w-[10px]"
-        fill="none"
-      >
-        <path
-          d="M7.75 12.25 10.35 14.85 16.5 8.7"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="3.2"
-        />
-      </svg>
-    </span>
   )
 }
 
