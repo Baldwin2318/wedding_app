@@ -516,6 +516,14 @@ function NewsFeed({
     if (!commentSheetPost) {
       return
     }
+
+    const confirmed = window.confirm(
+      'Are you sure you want to permanently delete this comment?',
+    )
+
+    if (!confirmed) {
+      return
+    }
   
     try {
       setIsSubmittingComment(true)
@@ -812,106 +820,100 @@ function NewsFeed({
                 opacity: pullDistance > 0 || isRefreshing ? 1 : 0,
               }}
             >
-              {isRefreshing ? (
-                <span className="inline-flex items-center gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950"
-                  />
-                  <span>Refreshing photos...</span>
-                </span>
-              ) : (
-                <span>
-                  {pullDistance >= PULL_TO_REFRESH_THRESHOLD
-                    ? 'Release to refresh'
-                    : 'Pull down to refresh'}
-                </span>
-              )}
+              {isRefreshing
+                ? 'Refreshing memories...'
+                : pullDistance >= PULL_TO_REFRESH_THRESHOLD
+                  ? 'Release to refresh'
+                  : 'Pull to refresh'}
             </div>
           ) : null}
 
           {pendingNewPhotoCount > 0 ? (
-            <div className="mx-auto w-full max-w-[520px]">
-              <button
-                type="button"
-                className="w-full rounded-full border border-zinc-950 bg-zinc-950 px-4 py-3 text-sm font-medium text-white transition hover:bg-white hover:text-zinc-950"
-                onClick={onLoadNewPhotos}
-              >
-                {pendingNewPhotoCount === 1
-                  ? '1 new upload'
-                  : `${pendingNewPhotoCount}+ new uploads`}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="mx-auto flex w-full max-w-[520px] items-center justify-center rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-950 shadow-sm transition hover:bg-zinc-100"
+              onClick={onLoadNewPhotos}
+            >
+              {pendingNewPhotoCount} new {pendingNewPhotoCount === 1 ? 'memory' : 'memories'}
+            </button>
           ) : null}
 
-          {!isInitialLoadingPhotos &&
-            posts.map((post) => {
-              const isPersistedPhoto = photos.some((photo) => photo.id === post.id)
-              const optimisticLike = optimisticLikes[post.id]
-              
-              const baseIsLiked = isPersistedPhoto
-                ? Boolean(post.likedByCurrentVisitor)
-                : false
-              
-              const baseLikeCount = Number(post.likesCount) || 0
-              
-              const isLiked = optimisticLike?.isLiked ?? baseIsLiked
-              const likeCount = optimisticLike?.likesCount ?? baseLikeCount
-              const showLikeCount = likeCount > 0
+          {posts.map((post) => {
+            const isDummyPost = post.id?.startsWith?.('dummy-')
+            const isPersistedPhoto = !isDummyPost && Boolean(post.id)
+            const optimisticLike = optimisticLikes[post.id]
+            const baseIsLiked = Boolean(post.likedByCurrentVisitor ?? likedPosts[post.id])
+            const baseLikeCount = Number(post.likesCount) || 0
+            const isLiked = optimisticLike?.isLiked ?? baseIsLiked
+            const likeCount = optimisticLike?.likesCount ?? baseLikeCount
+            const showLikeCount = likeCount > 0
+            const canDeletePost = Boolean(post.ownedByCurrentUser && onDeletePhoto)
 
-              return (
-                  <article
-                    key={post.id}
-                    className="mx-auto my-4 w-full max-w-[520px] overflow-hidden rounded-3xl border border-white bg-white shadow-[0_10px_40px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)]"
-                  >
-                    <div className="relative">
+            return (
+                <article
+                  key={post.id}
+                  className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)]"
+                >
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="block w-full cursor-zoom-in bg-stone-100"
+                      onClick={() =>
+                        setSelectedPhoto({
+                          ...post,
+                          src: post.image,
+                          alt: post.caption ?? 'Wedding photo',
+                        })
+                      }
+                      aria-label="Open photo viewer"
+                    >
                       <img
-                        className="block w-full cursor-pointer bg-stone-200 active:scale-[0.995]"
                         src={post.image}
-                        alt={post.caption ?? 'Wedding photo'}
-                        onClick={() =>
-                          setSelectedPhoto({
-                            ...post,
-                            src: post.image,
-                            alt: post.caption ?? 'Wedding photo',
-                          })
-                        }
+                        alt={post.caption}
+                        className="block aspect-[4/5] w-full bg-stone-100 object-cover"
+                        loading="lazy"
                       />
-                    
-                      {post.ownedByCurrentUser ? (
-                        <div className="absolute right-3 top-3">
-                          <button
-                            type="button"
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-xl font-bold leading-none text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] backdrop-blur-md transition active:scale-95"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setOpenPostMenuId((currentId) =>
-                                currentId === post.id ? null : post.id,
-                              )
-                            }}
-                            aria-label="Open post menu"
-                          >
-                            ⋯
-                          </button>
-                    
-                          {openPostMenuId === post.id ? (
-                            <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white text-sm shadow-[0_16px_45px_rgba(0,0,0,0.18)]">
-                              <button
-                                type="button"
-                                className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={Boolean(deletingPostIds[post.id])}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  handleDeletePost(post)
-                                }}
-                              >
-                                {deletingPostIds[post.id] ? 'Deleting...' : 'Delete post'}
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
+                    </button>
+
+                    {canDeletePost ? (
+                      <div
+                        className="absolute right-3 top-3 z-10"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-xl leading-none text-white shadow-sm backdrop-blur-md transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label="Open post actions"
+                          aria-expanded={openPostMenuId === post.id}
+                          disabled={Boolean(deletingPostIds[post.id])}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setOpenPostMenuId((currentId) =>
+                              currentId === post.id ? null : post.id,
+                            )
+                          }}
+                        >
+                          ⋯
+                        </button>
+
+                        {openPostMenuId === post.id ? (
+                          <div className="absolute right-0 mt-2 min-w-[150px] overflow-hidden rounded-2xl border border-zinc-200 bg-white text-sm shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
+                            <button
+                              type="button"
+                              className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={Boolean(deletingPostIds[post.id])}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleDeletePost(post)
+                              }}
+                            >
+                              {deletingPostIds[post.id] ? 'Deleting...' : 'Delete post'}
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
 
                   <div className="px-[18px] pt-4 pb-[18px]">
                     <div className="flex items-center justify-between gap-3">
@@ -1010,22 +1012,22 @@ function NewsFeed({
                   autoComplete="current-password"
                   autoFocus
                 />
-                
-                {accessCodeError ? (
-                  <p
-                    className={`mb-4 text-xs font-medium text-red-600 transition-opacity duration-500 ${
-                      accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
-                    }`}
-                  >
-                    {accessCodeError}
-                  </p>
-                ) : null}
-          
-                <div className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white/70">
+
+                <div
+                  className={`mb-3 min-h-[20px] text-xs font-medium text-red-600 transition-opacity duration-500 ${
+                    accessCodeErrorVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  aria-live="polite"
+                >
+                  {accessCodeError || ' '}
+                </div>
+
+                <div className="flex overflow-hidden rounded-2xl border border-zinc-200 bg-white">
                   <button
                     type="button"
                     className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-500 transition hover:bg-zinc-100 active:bg-zinc-200"
                     onClick={onCloseAccessTip}
+                    disabled={isVerifyingAccessCode}
                   >
                     Cancel
                   </button>
