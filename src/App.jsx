@@ -435,6 +435,23 @@ function App() {
     }
   }
 
+  function handleLogout() {
+    window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
+    window.localStorage.removeItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY)
+    window.localStorage.removeItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY)
+
+    setCurrentProfile({
+      uuid: '',
+      name: 'Guest',
+      urlProfilePic: '',
+    })
+    setIsPhotoRestricted(true)
+    setShowAccessTip(false)
+    setAccessCodeError('')
+    setPendingRestrictedAction(null)
+    setCurrentScreen('introduction')
+  }
+
   function handleProfileUpdated(profile) {
     const nextProfile = {
       uuid: profile?.uuid || currentProfile.uuid || '',
@@ -506,9 +523,11 @@ function App() {
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
+        onGoHome={() => setCurrentScreen('introduction')}
         currentProfile={currentProfile}
         canEditProfile={!isPhotoRestricted && Boolean(currentProfile.uuid)}
         onProfileUpdated={handleProfileUpdated}
+        onLogout={handleLogout}
       />
     ),
   }

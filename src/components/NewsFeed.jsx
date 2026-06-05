@@ -92,9 +92,11 @@ function NewsFeed({
   isVerifyingAccessCode = false,
   onAccessClick,
   onCloseAccessTip,
+  onGoHome,
   currentProfile = null,
   canEditProfile = false,
   onProfileUpdated,
+  onLogout,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -512,30 +514,45 @@ function NewsFeed({
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
        <div className="top-0 z-10 shrink-0 border-b border-zinc-200/80 bg-white/85 px-5 py-4 backdrop-blur-xl sm:px-4">
         <div className="relative mx-auto flex w-full max-w-[520px] items-center justify-between gap-4">
-          <h1 className="title-cursive m-0 text-2xl font-semibold text-zinc-950 sm:text-[1.35rem]">
+          <button
+            type="button"
+            onClick={onGoHome}
+            className="title-cursive m-0 text-2xl font-semibold text-zinc-950 transition active:scale-[0.98] sm:text-[1.35rem]"
+          >
             Happy Memories 🌺
-          </h1>
-    
-          <div className="flex shrink-0 items-center gap-2">
+          </button>
+
+          {canEditProfile ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                onClick={handleOpenUploadPicker}
+                disabled={isUploading}
+                aria-label="Add photo"
+              >
+                +
+              </button>
+
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
+                onClick={handleOpenCamera}
+                aria-label="Take picture"
+              >
+                <MinimalCameraIcon className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
-              onClick={handleOpenUploadPicker}
-              disabled={isUploading}
-              aria-label="Add photo"
+              className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onAccessClick}
+              disabled={isVerifyingAccessCode}
             >
-              +
+              {isVerifyingAccessCode ? 'Checking...' : 'Login'}
             </button>
-    
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-zinc-200"
-              onClick={handleOpenCamera}
-              aria-label="Take picture"
-            >
-              <MinimalCameraIcon className="h-5 w-5" />
-            </button>
-          </div>
+          )}
     
           {showAccessTip ? (
             <div className="absolute right-0 top-14 z-20 w-64 rounded-2xl border border-zinc-200 bg-white p-4 text-sm shadow-xl">
@@ -801,6 +818,7 @@ function NewsFeed({
         error={profileSaveError}
         onClose={closeProfileSettings}
         onSave={handleSaveProfile}
+        onLogout={onLogout}
       />
 
       <PhotoViewer
