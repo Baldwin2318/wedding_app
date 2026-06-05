@@ -185,7 +185,7 @@ function CommentsSheet({
         ) : null}
 
         <form
-          className="keyboard-safe-bottom flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white px-4 pt-3 pb-3"
+          className="keyboard-safe-bottom flex shrink-0 items-center gap-3 border-t border-zinc-200 bg-white px-4 pt-3 pb-6"
           onSubmit={handleSubmit}
         >
           <ProfileAvatar
