@@ -45,6 +45,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     profileImage: photo.profileImageUrl || '',
     verified: Boolean(photo.uploaderVerified),
     commentsCount: photo.commentsCount ?? 0,
+    createdAt: photo.createdAt || '',
   }
 }
 
@@ -373,6 +374,7 @@ function App() {
           verified: Boolean(uploadedPhoto.uploaderVerified),
           commentsCount: uploadedPhoto.commentsCount ?? 0,
           ownedByCurrentUser: true,
+          createdAt: uploadedPhoto.createdAt || new Date().toISOString(),
         },
         ...currentPhotos,
       ])
@@ -401,6 +403,7 @@ function App() {
         verified: Boolean(uploadedPhoto.uploaderVerified),
         commentsCount: uploadedPhoto.commentsCount ?? 0,
         ownedByCurrentUser: true,
+        createdAt: uploadedPhoto.createdAt || new Date().toISOString(),
       },
       ...currentPhotos,
     ])
