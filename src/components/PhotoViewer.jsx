@@ -89,7 +89,12 @@ export default function PhotoViewer({
           <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded-full px-1.5 py-1 text-sm font-semibold transition active:scale-95"
-            onClick={() => onCommentClick?.(photo)}
+            onClick={() => {
+              onClose?.()
+              window.setTimeout(() => {
+                onCommentClick?.(photo)
+              }, 0)
+            }}
             aria-label="Open comments"
           >
             <CommentIcon />
