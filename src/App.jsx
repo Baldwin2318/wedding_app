@@ -14,6 +14,12 @@ import {
   PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
   PHOTO_ACCESS_UUID_STORAGE_KEY,
 } from './lib/accessCode'
+import {
+  addPhotoComment,
+  deletePhotoComment,
+  fetchPhotoComments,
+  updatePhotoComment,
+} from './lib/photoComments'
 
 let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
@@ -37,6 +43,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     authorId: photo.uploaderUuid || '',
     profileImage: photo.profileImageUrl || '',
     verified: Boolean(photo.uploaderVerified),
+    commentsCount: photo.commentsCount ?? 0,
   }
 }
 
@@ -359,6 +366,7 @@ function App() {
           authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
           profileImage: uploadedPhoto.profileImageUrl || '',
           verified: Boolean(uploadedPhoto.uploaderVerified),
+          commentsCount: uploadedPhoto.commentsCount ?? 0,
         },
         ...currentPhotos,
       ])
@@ -596,6 +604,48 @@ function App() {
     )
   }
 
+  async function handleLoadPhotoComments(photoId) {
+    return fetchPhotoComments(photoId)
+  }
+  
+  async function handleAddPhotoComment(photoId, body) {
+    const result = await addPhotoComment(photoId, body)
+  
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.map((photo) =>
+        photo.id === String(photoId)
+          ? {
+              ...photo,
+              commentsCount: result.commentsCount ?? (Number(photo.commentsCount) || 0) + 1,
+            }
+          : photo,
+      ),
+    )
+  
+    return result.comment
+  }
+  
+  async function handleUpdatePhotoComment(photoId, commentId, body) {
+    return updatePhotoComment(photoId, commentId, body)
+  }
+  
+  async function handleDeletePhotoComment(photoId, commentId) {
+    const result = await deletePhotoComment(photoId, commentId)
+  
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.map((photo) =>
+        photo.id === String(photoId)
+          ? {
+              ...photo,
+              commentsCount: result.commentsCount ?? Math.max((Number(photo.commentsCount) || 0) - 1, 0),
+            }
+          : photo,
+      ),
+    )
+  
+    return result
+  }
+  
   if (isRestoringSession) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-zinc-50 px-6">
@@ -674,6 +724,10 @@ function App() {
         onLoadMorePhotos={handleLoadMorePhotos}
         onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
+        onLoadPhotoComments={handleLoadPhotoComments}
+        onAddPhotoComment={handleAddPhotoComment}
+        onUpdatePhotoComment={handleUpdatePhotoComment}
+        onDeletePhotoComment={handleDeletePhotoComment}
         pendingNewPhotoCount={pendingNewPhotoIds.length}
         onUploadPhoto={handleSelectedPhotoUpload}
         requestPhotoAccess={requestUploadAccess}
