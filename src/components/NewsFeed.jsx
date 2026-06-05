@@ -607,6 +607,7 @@ function NewsFeed({
               ...currentSelectedProfile,
               author: nextProfile.name,
               profileImage: nextProfile.urlProfilePic || '',
+              verified: Boolean(nextProfile.verified ?? currentSelectedProfile.verified),
             }
           : currentSelectedProfile,
       )
