@@ -773,6 +773,7 @@ function NewsFeed({
                     alt={post.caption ?? "Wedding photo"}
                     onClick={() =>
                       setSelectedPhoto({
+                        ...post,
                         src: post.image,
                         alt: post.caption ?? 'Wedding photo',
                       })
