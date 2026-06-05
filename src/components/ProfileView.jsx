@@ -66,6 +66,7 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
                 className="aspect-square bg-zinc-100"
                 onClick={() =>
                   onSelectPhoto?.({
+                    ...post,
                     src: post.image,
                     alt: post.caption ?? `${profileName} photo`,
                   })
