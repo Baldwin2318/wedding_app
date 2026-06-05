@@ -561,7 +561,7 @@ function NewsFeed({
             <button
               type="button"
               className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={onAccessClick}
+              onClick={() => requestPhotoAccess?.()}
               disabled={isVerifyingAccessCode}
             >
               {isVerifyingAccessCode ? 'Checking...' : 'Login'}
@@ -599,7 +599,7 @@ function NewsFeed({
                   <button
                     type="button"
                     className="flex-1 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 active:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={onAccessClick}
+                    onClick={() => requestPhotoAccess?.()}
                     disabled={isVerifyingAccessCode}
                   >
                     {isVerifyingAccessCode ? 'Checking...' : 'ACCESS'}
