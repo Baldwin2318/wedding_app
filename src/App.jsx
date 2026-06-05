@@ -619,6 +619,8 @@ function App() {
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
+        accessCodeInput={accessCodeInput}
+        onAccessCodeInputChange={setAccessCodeInput}  
       />
     ),
     guide: (
@@ -632,6 +634,8 @@ function App() {
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
         canUseCamera={isPhotoRestricted || canUsePersonalFeatures}
+        accessCodeInput={accessCodeInput}
+        onAccessCodeInputChange={setAccessCodeInput}
       />
     ),
     camera: (
@@ -671,6 +675,8 @@ function App() {
         canUploadPhotos={canUsePersonalFeatures}
         onProfileUpdated={handleProfileUpdated}
         onLogout={handleLogout}
+        accessCodeInput={accessCodeInput}
+        onAccessCodeInputChange={setAccessCodeInput}
       />
     ),
   }
