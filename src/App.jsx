@@ -10,6 +10,7 @@ import { togglePhotoLike } from './lib/togglePhotoLike'
 import { uploadCapturedPhoto, uploadSelectedPhoto } from './lib/uploadPhoto'
 import {
   PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+  PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
   PHOTO_ACCESS_UUID_STORAGE_KEY,
 } from './lib/accessCode'
 
@@ -26,6 +27,7 @@ function mapSavedPhotoToFeedPhoto(photo) {
     likesCount: photo.likesCount ?? null,
     likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
     author: photo.uploaderName || 'Guest',
+    authorId: photo.uploaderUuid || '',
     profileImage: photo.profileImageUrl || '',
   }
 }
@@ -44,6 +46,17 @@ function App() {
   const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false)
   const [accessCodeError, setAccessCodeError] = useState('')
   const [pendingRestrictedAction, setPendingRestrictedAction] = useState(null)
+  const [currentProfile, setCurrentProfile] = useState(() => ({
+    uuid: typeof window !== 'undefined'
+      ? window.localStorage.getItem(PHOTO_ACCESS_UUID_STORAGE_KEY) || ''
+      : '',
+    name: typeof window !== 'undefined'
+      ? window.localStorage.getItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY) || 'Guest'
+      : 'Guest',
+    urlProfilePic: typeof window !== 'undefined'
+      ? window.localStorage.getItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY) || ''
+      : '',
+  }))
 
   useEffect(() => {
     function updateViewportMetrics() {
@@ -191,6 +204,8 @@ function App() {
         if (!response.ok || !payload.ok || !payload.valid) {
           window.localStorage.removeItem(PHOTO_ACCESS_UUID_STORAGE_KEY)
           window.localStorage.removeItem(PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY)
+          window.localStorage.removeItem(PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY)
+          setCurrentProfile({ uuid: '', name: 'Guest', urlProfilePic: '' })
           setIsPhotoRestricted(true)
           return
         }
@@ -199,6 +214,15 @@ function App() {
           PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
           payload.guestName || 'Guest',
         )
+        window.localStorage.setItem(
+          PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
+          payload.profile?.urlProfilePic || '',
+        )
+        setCurrentProfile({
+          uuid: savedAccessCodeUuid.trim(),
+          name: payload.profile?.name || payload.guestName || 'Guest',
+          urlProfilePic: payload.profile?.urlProfilePic || '',
+        })
         setIsPhotoRestricted(false)
       } catch (error) {
         console.error('Failed to verify saved access code session:', error)
@@ -236,6 +260,7 @@ function App() {
           likesCount: uploadedPhoto.likesCount ?? null,
           likedByCurrentVisitor: false,
           author: uploadedPhoto.uploaderName || 'Guest',
+          authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
           profileImage: uploadedPhoto.profileImageUrl || '',
         },
         ...currentPhotos,
@@ -260,6 +285,7 @@ function App() {
         likesCount: uploadedPhoto.likesCount ?? null,
         likedByCurrentVisitor: false,
         author: uploadedPhoto.uploaderName || 'Guest',
+        authorId: uploadedPhoto.uploaderUuid || currentProfile.uuid || '',
         profileImage: uploadedPhoto.profileImageUrl || '',
       },
       ...currentPhotos,
@@ -383,6 +409,15 @@ function App() {
         PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
         payload.guestName || 'Guest',
       )
+      window.localStorage.setItem(
+        PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
+        payload.profile?.urlProfilePic || '',
+      )
+      setCurrentProfile({
+        uuid: String(payload.accessCodeUuid),
+        name: payload.profile?.name || payload.guestName || 'Guest',
+        urlProfilePic: payload.profile?.urlProfilePic || '',
+      })
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_STORAGE_KEY)
       window.localStorage.removeItem(LEGACY_PHOTO_ACCESS_CODE_ID_STORAGE_KEY)
       setIsPhotoRestricted(false)
@@ -398,6 +433,36 @@ function App() {
     } finally {
       setIsVerifyingAccessCode(false)
     }
+  }
+
+  function handleProfileUpdated(profile) {
+    const nextProfile = {
+      uuid: profile?.uuid || currentProfile.uuid || '',
+      name: profile?.name || currentProfile.name || 'Guest',
+      urlProfilePic: profile?.urlProfilePic || '',
+    }
+
+    setCurrentProfile(nextProfile)
+    window.localStorage.setItem(
+      PHOTO_ACCESS_GUEST_NAME_STORAGE_KEY,
+      nextProfile.name || 'Guest',
+    )
+    window.localStorage.setItem(
+      PHOTO_ACCESS_PROFILE_IMAGE_STORAGE_KEY,
+      nextProfile.urlProfilePic || '',
+    )
+
+    setFeedPhotos((currentPhotos) =>
+      currentPhotos.map((photo) =>
+        photo.authorId === nextProfile.uuid
+          ? {
+              ...photo,
+              author: nextProfile.name,
+              profileImage: nextProfile.urlProfilePic,
+            }
+          : photo,
+      ),
+    )
   }
   
   const screens = {
@@ -441,6 +506,9 @@ function App() {
         isVerifyingAccessCode={isVerifyingAccessCode}
         onAccessClick={handleAccessClick}
         onCloseAccessTip={() => setShowAccessTip(false)}
+        currentProfile={currentProfile}
+        canEditProfile={!isPhotoRestricted && Boolean(currentProfile.uuid)}
+        onProfileUpdated={handleProfileUpdated}
       />
     ),
   }

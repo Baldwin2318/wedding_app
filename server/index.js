@@ -276,10 +276,38 @@ async function ensureProfileExistsForCodeRow(codeRow) {
       INSERT INTO profiles (uuid, name)
       VALUES ($1, $2)
       ON CONFLICT (uuid)
-      DO UPDATE SET name = EXCLUDED.name
+      DO NOTHING
     `,
     [accessCodeUuid, getGuestNameFromAccessCode(accessCode)],
   )
+}
+
+async function getProfileByUuid(accessCodeUuid) {
+  if (!accessCodeUuid) {
+    return null
+  }
+
+  const result = await pool.query(
+    `
+      SELECT id, uuid, name, object_key, url_profile_pic
+      FROM profiles
+      WHERE uuid = $1
+      LIMIT 1
+    `,
+    [accessCodeUuid],
+  )
+
+  if (result.rowCount === 0) {
+    return null
+  }
+
+  return {
+    id: String(result.rows[0].id),
+    uuid: result.rows[0].uuid,
+    name: result.rows[0].name,
+    objectKey: result.rows[0].object_key,
+    urlProfilePic: result.rows[0].url_profile_pic,
+  }
 }
 
 function getSafeFileExtension(filename = '', mimeType = '') {
@@ -372,7 +400,8 @@ app.get('/api/photos', async (request, response) => {
           photo_captures.image_url,
           photo_captures.caption,
           photo_captures.ip_address,
-          photo_captures.uploader_name,
+          COALESCE(profiles.name, photo_captures.uploader_name) AS uploader_name,
+          profiles.uuid AS uploader_uuid,
           profiles.url_profile_pic,
           photo_captures.created_at,
           photo_captures.likes_count,
@@ -406,6 +435,7 @@ app.get('/api/photos', async (request, response) => {
         likedByCurrentVisitor: row.liked_by_current_visitor,
         ipAddress: row.ip_address,
         uploaderName: row.uploader_name,
+        uploaderUuid: row.uploader_uuid,
         profileImageUrl: row.url_profile_pic,
         createdAt: row.created_at,
       })),
@@ -512,7 +542,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
     if (accessCodeUuid) {
       const codeResult = await pool.query(
         `
-          SELECT codes.code, profiles.url_profile_pic
+          SELECT codes.code, profiles.name, profiles.url_profile_pic
           FROM codes
           LEFT JOIN profiles
             ON profiles.uuid = codes.uuid
@@ -523,7 +553,8 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       )
 
       if (codeResult.rowCount > 0) {
-        uploaderName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+        uploaderName =
+          codeResult.rows[0].name || getGuestNameFromAccessCode(codeResult.rows[0].code)
         profileImageUrl = codeResult.rows[0].url_profile_pic || null
       }
     }
@@ -564,6 +595,7 @@ app.post('/api/photos', upload.single('file'), async (request, response) => {
       likesCount: result.rows[0].likes_count,
       ipAddress: result.rows[0].ip_address,
       uploaderName: result.rows[0].uploader_name,
+      uploaderUuid: accessCodeUuid || null,
       profileImageUrl,
       createdAt: result.rows[0].created_at,
     })
@@ -755,9 +787,11 @@ app.post('/api/access-codes/verify', async (request, response) => {
     )
 
     const verifiedCode = result.rows[0]?.code || ''
+    let profile = null
 
     if (result.rowCount > 0) {
       await ensureProfileExistsForCodeRow(result.rows[0])
+      profile = await getProfileByUuid(result.rows[0].uuid)
     }
 
     response.status(200).json({
@@ -767,7 +801,9 @@ app.post('/api/access-codes/verify', async (request, response) => {
         typeof result.rows[0]?.uuid === 'string' && result.rows[0].uuid.trim()
           ? result.rows[0].uuid.trim()
           : null,
-      guestName: result.rowCount > 0 ? getGuestNameFromAccessCode(verifiedCode) : null,
+      guestName:
+        result.rowCount > 0 ? profile?.name || getGuestNameFromAccessCode(verifiedCode) : null,
+      profile,
     })
   } catch (error) {
     response.status(500).json({
@@ -803,15 +839,21 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
       [accessCodeUuid],
     )
 
+    let profile = null
+
     if (result.rowCount > 0) {
       await ensureProfileExistsForCodeRow(result.rows[0])
+      profile = await getProfileByUuid(result.rows[0].uuid)
     }
 
     response.status(200).json({
       ok: true,
       valid: result.rowCount > 0,
       guestName:
-        result.rowCount > 0 ? getGuestNameFromAccessCode(result.rows[0].code) : null,
+        result.rowCount > 0
+          ? profile?.name || getGuestNameFromAccessCode(result.rows[0].code)
+          : null,
+      profile,
     })
   } catch (error) {
     response.status(500).json({
@@ -825,15 +867,6 @@ app.post('/api/access-codes/verify-session', async (request, response) => {
 })
 
 app.post('/api/profiles', upload.single('file'), async (request, response) => {
-  if (!hasR2Config || !r2Client || !r2BucketName || !r2PublicBaseUrl) {
-    response.status(500).json({
-      ok: false,
-      error:
-        'R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL in .env.',
-    })
-    return
-  }
-
   const file = request.file
   const requestedUuid =
     typeof request.body.uuid === 'string'
@@ -841,6 +874,8 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
       : typeof request.headers['x-access-code-uuid'] === 'string'
         ? request.headers['x-access-code-uuid'].trim()
         : ''
+  const requestedName =
+    typeof request.body.name === 'string' ? request.body.name.trim() : ''
   if (!requestedUuid) {
     response.status(400).json({
       ok: false,
@@ -849,10 +884,10 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
     return
   }
 
-  if (!file) {
+  if (!file && !requestedName) {
     response.status(400).json({
       ok: false,
-      error: 'Profile picture is required.',
+      error: 'Profile name or profile picture is required.',
     })
     return
   }
@@ -878,21 +913,37 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
 
     await ensureProfileExistsForCodeRow(codeResult.rows[0])
     const profileUuid = codeResult.rows[0].uuid
-    const profileName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+    const existingProfile = await getProfileByUuid(profileUuid)
+    const fallbackName = getGuestNameFromAccessCode(codeResult.rows[0].code)
+    const profileName = requestedName || existingProfile?.name || fallbackName
+    let objectKey = existingProfile?.objectKey || null
+    let urlProfilePic = existingProfile?.urlProfilePic || null
 
-    const extension = getSafeFileExtension(file.originalname, file.mimetype)
-    const objectKey = `wedding_profile_pics/${Date.now()}-${crypto.randomUUID()}.${extension}`
+    if (file) {
+      if (!hasR2Config || !r2Client || !r2BucketName || !r2PublicBaseUrl) {
+        response.status(500).json({
+          ok: false,
+          error:
+            'R2 is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, and R2_PUBLIC_BASE_URL in .env.',
+        })
+        return
+      }
 
-    await r2Client.send(
-      new PutObjectCommand({
-        Bucket: r2BucketName,
-        Key: objectKey,
-        Body: file.buffer,
-        ContentType: file.mimetype || 'image/jpeg',
-      }),
-    )
+      const extension = getSafeFileExtension(file.originalname, file.mimetype)
+      objectKey = `wedding_profile_pics/${Date.now()}-${crypto.randomUUID()}.${extension}`
 
-    const urlProfilePic = buildPublicImageUrl(objectKey)
+      await r2Client.send(
+        new PutObjectCommand({
+          Bucket: r2BucketName,
+          Key: objectKey,
+          Body: file.buffer,
+          ContentType: file.mimetype || 'image/jpeg',
+        }),
+      )
+
+      urlProfilePic = buildPublicImageUrl(objectKey)
+    }
+
     const result = await pool.query(
       `
         INSERT INTO profiles (
@@ -914,13 +965,7 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
 
     response.status(200).json({
       ok: true,
-      profile: {
-        id: String(result.rows[0].id),
-        uuid: result.rows[0].uuid,
-        name: result.rows[0].name,
-        objectKey: result.rows[0].object_key,
-        urlProfilePic: result.rows[0].url_profile_pic,
-      },
+      profile: await getProfileByUuid(result.rows[0].uuid),
     })
   } catch (error) {
     response.status(500).json({

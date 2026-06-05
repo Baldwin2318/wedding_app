@@ -5,6 +5,8 @@ import PhotoViewer from './PhotoViewer'
 import ProfileAvatar from './ProfileAvatar'
 import ProfileView from './ProfileView'
 import useBrowserBackStack from '../hooks/useBrowserBackStack'
+import ProfileSettings from './ProfileSettings'
+import { saveProfile } from '../lib/saveProfile'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -90,6 +92,9 @@ function NewsFeed({
   isVerifyingAccessCode = false,
   onAccessClick,
   onCloseAccessTip,
+  currentProfile = null,
+  canEditProfile = false,
+  onProfileUpdated,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -111,10 +116,14 @@ function NewsFeed({
   const [optimisticLikes, setOptimisticLikes] = useState({})
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [selectedProfile, setSelectedProfile] = useState(null)
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileSaveError, setProfileSaveError] = useState('')
   const { pushView } = useBrowserBackStack()
   const uploadHistoryDisposeRef = useRef(null)
   const profileHistoryDisposeRef = useRef(null)
   const photoHistoryDisposeRef = useRef(null)
+  const profileSettingsHistoryDisposeRef = useRef(null)
 
   useEffect(() => {
     return () => {
@@ -174,6 +183,11 @@ function NewsFeed({
     setSelectedProfile(post)
   }
 
+  function openProfileSettings() {
+    setProfileSaveError('')
+    setIsProfileSettingsOpen(true)
+  }
+
   function closeSelectedPhoto() {
     if (photoHistoryDisposeRef.current) {
       const dispose = photoHistoryDisposeRef.current
@@ -194,6 +208,18 @@ function NewsFeed({
     }
 
     setSelectedProfile(null)
+  }
+
+  function closeProfileSettings() {
+    if (profileSettingsHistoryDisposeRef.current) {
+      const dispose = profileSettingsHistoryDisposeRef.current
+      profileSettingsHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
+    setIsProfileSettingsOpen(false)
+    setProfileSaveError('')
   }
 
   function clearSelectedUpload() {
@@ -429,6 +455,49 @@ function NewsFeed({
       photoHistoryDisposeRef.current = null
     }
   }, [pushView, selectedPhoto])
+
+  useEffect(() => {
+    if (isProfileSettingsOpen && !profileSettingsHistoryDisposeRef.current) {
+      profileSettingsHistoryDisposeRef.current = pushView('profile-settings', () => {
+        profileSettingsHistoryDisposeRef.current = null
+        setIsProfileSettingsOpen(false)
+        setProfileSaveError('')
+      })
+      return
+    }
+
+    if (!isProfileSettingsOpen) {
+      profileSettingsHistoryDisposeRef.current = null
+    }
+  }, [isProfileSettingsOpen, pushView])
+
+  async function handleSaveProfile({ name, file }) {
+    try {
+      setIsSavingProfile(true)
+      setProfileSaveError('')
+      const nextProfile = await saveProfile({ name, file })
+      onProfileUpdated?.(nextProfile)
+
+      setSelectedProfile((currentSelectedProfile) =>
+        currentSelectedProfile &&
+        String(currentSelectedProfile.authorId || '') === String(nextProfile.uuid || '')
+          ? {
+              ...currentSelectedProfile,
+              author: nextProfile.name,
+              profileImage: nextProfile.urlProfilePic || '',
+            }
+          : currentSelectedProfile,
+      )
+
+      closeProfileSettings()
+    } catch (error) {
+      setProfileSaveError(
+        error instanceof Error ? error.message : 'Failed to save profile.',
+      )
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
   
   return (
     <section className="fixed inset-0 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
@@ -701,6 +770,21 @@ function NewsFeed({
         </div>
       ) : null}
 
+      {canEditProfile ? (
+        <button
+          type="button"
+          className="fixed bottom-6 right-5 z-30 inline-flex h-15 w-15 items-center justify-center rounded-full bg-white/88 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5 backdrop-blur-xl transition active:scale-95"
+          onClick={openProfileSettings}
+          aria-label="Open profile settings"
+        >
+          <ProfileAvatar
+            src={currentProfile?.urlProfilePic || currentProfile?.profileImage || ''}
+            name={currentProfile?.name || 'Guest'}
+            className="h-12 w-12 shadow-none ring-0"
+          />
+        </button>
+      ) : null}
+
       {selectedProfile ? (
         <ProfileView
           profile={selectedProfile}
@@ -709,6 +793,15 @@ function NewsFeed({
           onSelectPhoto={setSelectedPhoto}
         />
       ) : null}
+
+      <ProfileSettings
+        isOpen={isProfileSettingsOpen}
+        profile={currentProfile}
+        isSaving={isSavingProfile}
+        error={profileSaveError}
+        onClose={closeProfileSettings}
+        onSave={handleSaveProfile}
+      />
 
       <PhotoViewer
         photo={selectedPhoto}
