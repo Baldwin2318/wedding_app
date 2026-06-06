@@ -48,7 +48,7 @@ function ProfileView({
   const isVerified = Boolean(profile.verified)
 
   return (
-    <section className="fixed inset-0 z-30 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
+    <section className="fixed inset-0 z-50 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
       <header className="shrink-0 border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-[520px] items-center gap-3">
           <button

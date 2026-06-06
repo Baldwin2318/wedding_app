@@ -180,6 +180,7 @@ function NewsFeed({
   const [profileSaveError, setProfileSaveError] = useState('')
   const { pushView } = useBrowserBackStack()
   const uploadHistoryDisposeRef = useRef(null)
+  const membersHistoryDisposeRef = useRef(null)
   const profileHistoryDisposeRef = useRef(null)
   const photoHistoryDisposeRef = useRef(null)
   const profileSettingsHistoryDisposeRef = useRef(null)
@@ -360,6 +361,17 @@ function NewsFeed({
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  function closeMembers() {
+    if (membersHistoryDisposeRef.current) {
+      const dispose = membersHistoryDisposeRef.current
+      membersHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
+    setIsMembersOpen(false)
   }
 
   function handleFileChange(event) {
@@ -701,6 +713,20 @@ function NewsFeed({
   }, [pushView, selectedUploadFile, selectedUploadPreviewUrl])
 
   useEffect(() => {
+    if (isMembersOpen && !membersHistoryDisposeRef.current) {
+      membersHistoryDisposeRef.current = pushView('members-view', () => {
+        membersHistoryDisposeRef.current = null
+        setIsMembersOpen(false)
+      })
+      return
+    }
+
+    if (!isMembersOpen) {
+      membersHistoryDisposeRef.current = null
+    }
+  }, [isMembersOpen, pushView])
+
+  useEffect(() => {
     if (selectedProfile && !profileHistoryDisposeRef.current) {
       profileHistoryDisposeRef.current = pushView('profile-view', () => {
         profileHistoryDisposeRef.current = null
@@ -843,12 +869,7 @@ function NewsFeed({
         setIsMembersOpen(true)
     }
 
-    function closeMembers() {
-    setIsMembersOpen(false) 
-    }
-
     function openMemberProfile(member) {
-        setIsMembersOpen(false)
         setSelectedProfile(member)
     }
   

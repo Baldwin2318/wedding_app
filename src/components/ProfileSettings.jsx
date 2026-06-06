@@ -64,7 +64,7 @@ function ProfileSettings({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-zinc-950/35 p-4 backdrop-blur-[3px] sm:items-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-zinc-950/35 p-4 backdrop-blur-[3px] sm:items-center">
       <input
         ref={fileInputRef}
         type="file"
