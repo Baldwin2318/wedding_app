@@ -11,6 +11,7 @@ import FeedSkeletonCard from './FeedSkeletonCard'
 import VerifiedBadge from './VerifiedBadge'
 import CommentIcon from './CommentIcon'
 import CommentsSheet, { formatRelativeTime } from './CommentsSheet'
+import MembersView from './MembersView'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -783,43 +784,6 @@ function NewsFeed({
   }
   
 
-    const members = Array.from(
-        new Map(
-            [
-            currentProfile
-                ? {
-                    id: String(currentProfile.uuid || currentProfile.id || 'current-user'),
-                    authorId: currentProfile.uuid || currentProfile.id,
-                    author: currentProfile.name || 'Guest',
-                    profileImage:
-                    currentProfile.urlProfilePic ||
-                    currentProfile.profileImage ||
-                    currentProfile.avatar ||
-                    '',
-                    verified: Boolean(currentProfile.verified),
-                }
-                : null,
-
-            ...photos
-                .filter((photo) => photo.authorId || photo.author)
-                .map((photo) => ({
-                id: String(photo.authorId || photo.author),
-                authorId: photo.authorId,
-                author: photo.author || 'Guest',
-                profileImage:
-                    photo.profileImage ||
-                    photo.profilePhoto ||
-                    photo.avatar ||
-                    photo.authorAvatar ||
-                    '',
-                verified: Boolean(photo.verified),
-                })),
-            ]
-            .filter(Boolean)
-            .map((member) => [member.id, member]),
-        ).values(),
-    )
-
     function openCurrentUserProfile() {
     setIsNavOpen(false)
 
@@ -831,17 +795,70 @@ function NewsFeed({
     })
     }
 
+    const members = Array.from(
+    new Map(
+        [
+        currentProfile
+            ? {
+                id: String(currentProfile.uuid || currentProfile.id || 'current-user'),
+                authorId: currentProfile.uuid || currentProfile.id,
+                author: currentProfile.name || 'Guest',
+                profileImage:
+                currentProfile.urlProfilePic ||
+                currentProfile.profileImage ||
+                currentProfile.avatar ||
+                '',
+                verified: Boolean(currentProfile.verified),
+            }
+            : null,
+
+        ...photos
+            .filter((photo) => photo.authorId || photo.author)
+            .map((photo) => ({
+            id: String(photo.authorId || photo.author),
+            authorId: photo.authorId,
+            author: photo.author || 'Guest',
+            profileImage:
+                photo.profileImage ||
+                photo.profilePhoto ||
+                photo.avatar ||
+                photo.authorAvatar ||
+                '',
+            verified: Boolean(photo.verified),
+            })),
+        ]
+        .filter(Boolean)
+        .map((member) => [member.id, member]),
+    ).values(),
+    )
+
+    function openCurrentUserProfile() {
+        setIsNavOpen(false)
+
+        setSelectedProfile({
+            authorId: currentProfile?.uuid || currentProfile?.id,
+            author: currentProfile?.name || 'Guest',
+            profileImage:
+            currentProfile?.urlProfilePic ||
+            currentProfile?.profileImage ||
+            currentProfile?.avatar ||
+            '',
+            verified: Boolean(currentProfile?.verified),
+        })
+    }
+
     function openMembers() {
-    setIsNavOpen(false)
-    setIsMembersOpen(true)
+        setIsNavOpen(false)
+        setIsMembersOpen(true)
     }
 
     function closeMembers() {
-    setIsMembersOpen(false)
+    setIsMembersOpen(false) 
     }
 
     function openMemberProfile(member) {
-    setSelectedProfile(member)
+        setIsMembersOpen(false)
+        setSelectedProfile(member)
     }
   
   return (
