@@ -12,6 +12,7 @@ import VerifiedBadge from './VerifiedBadge'
 import CommentIcon from './CommentIcon'
 import CommentsSheet, { formatRelativeTime } from './CommentsSheet'
 import MembersView from './MembersView'
+import { fetchMembers } from '../lib/fetchMembers'
 
 const PULL_TO_REFRESH_THRESHOLD = 80
 
@@ -201,10 +202,50 @@ function NewsFeed({
   const [isLoadingComments, setIsLoadingComments] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentsError, setCommentsError] = useState('')
-  const [openPostMenuId, setOpenPostMenuId] = useState(null)
   const [deletingPostIds, setDeletingPostIds] = useState({})
   const [isNavOpen, setIsNavOpen] = useState(false)
   const [isMembersOpen, setIsMembersOpen] = useState(false)
+  const [members, setMembers] = useState([])
+
+  useEffect(() => {
+    if (!hasVerifiedAccess) {
+      setMembers([])
+      return
+    }
+
+    let isCancelled = false
+
+    async function loadMembers() {
+      try {
+        const profiles = await fetchMembers()
+
+        if (isCancelled) {
+          return
+        }
+
+        setMembers(
+          profiles.map((profile) => ({
+            id: String(profile.id || profile.uuid),
+            authorId: profile.uuid,
+            author: profile.name || 'Guest',
+            profileImage: profile.urlProfilePic || '',
+            verified: Boolean(profile.verified),
+          })),
+        )
+      } catch (error) {
+        if (!isCancelled) {
+          console.error('Failed to load members:', error)
+          setMembers([])
+        }
+      }
+    }
+
+    loadMembers()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [hasVerifiedAccess])
 
   useEffect(() => {
     return () => {
@@ -611,7 +652,6 @@ function NewsFeed({
     )
   
     if (!confirmed) {
-      setOpenPostMenuId(null)
       return
     }
   
@@ -620,7 +660,6 @@ function NewsFeed({
         ...current,
         [post.id]: true,
       }))
-      setOpenPostMenuId(null)
       await onDeletePhoto?.(post.id)
   
       if (selectedPhoto?.id === post.id) {
@@ -761,6 +800,19 @@ function NewsFeed({
       const nextProfile = await saveProfile({ name, file })
       onProfileUpdated?.(nextProfile)
 
+      setMembers((currentMembers) =>
+        currentMembers.map((member) =>
+          String(member.authorId || '') === String(nextProfile.uuid || '')
+            ? {
+                ...member,
+                author: nextProfile.name || member.author,
+                profileImage: nextProfile.urlProfilePic || '',
+                verified: Boolean(nextProfile.verified ?? member.verified),
+              }
+            : member,
+        ),
+      )
+
       setSelectedProfile((currentSelectedProfile) =>
         currentSelectedProfile &&
         String(currentSelectedProfile.authorId || '') === String(nextProfile.uuid || '')
@@ -783,54 +835,6 @@ function NewsFeed({
     }
   }
   
-
-    function openCurrentUserProfile() {
-    setIsNavOpen(false)
-
-    setSelectedProfile({
-        authorId: currentProfile?.uuid,
-        author: currentProfile?.name || 'Guest',
-        profileImage: currentProfile?.urlProfilePic || currentProfile?.profileImage || '',
-        verified: Boolean(currentProfile?.verified),
-    })
-    }
-
-    const members = Array.from(
-    new Map(
-        [
-        currentProfile
-            ? {
-                id: String(currentProfile.uuid || currentProfile.id || 'current-user'),
-                authorId: currentProfile.uuid || currentProfile.id,
-                author: currentProfile.name || 'Guest',
-                profileImage:
-                currentProfile.urlProfilePic ||
-                currentProfile.profileImage ||
-                currentProfile.avatar ||
-                '',
-                verified: Boolean(currentProfile.verified),
-            }
-            : null,
-
-        ...photos
-            .filter((photo) => photo.authorId || photo.author)
-            .map((photo) => ({
-            id: String(photo.authorId || photo.author),
-            authorId: photo.authorId,
-            author: photo.author || 'Guest',
-            profileImage:
-                photo.profileImage ||
-                photo.profilePhoto ||
-                photo.avatar ||
-                photo.authorAvatar ||
-                '',
-            verified: Boolean(photo.verified),
-            })),
-        ]
-        .filter(Boolean)
-        .map((member) => [member.id, member]),
-    ).values(),
-    )
 
     function openCurrentUserProfile() {
         setIsNavOpen(false)
@@ -1024,7 +1028,6 @@ function NewsFeed({
             const isLiked = optimisticLike?.isLiked ?? baseIsLiked
             const likeCount = optimisticLike?.likesCount ?? baseLikeCount
             const showLikeCount = likeCount > 0
-            const canDeletePost = Boolean(post.ownedByCurrentUser && onDeletePhoto)
             const postTime = formatRelativeTime(post.createdAt)
 
             return (
@@ -1053,44 +1056,6 @@ function NewsFeed({
                       />
                     </button>
 
-                    {canDeletePost ? (
-                      <div
-                        className="absolute right-3 top-3 z-10"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-xl leading-none text-white shadow-sm backdrop-blur-md transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label="Open post actions"
-                          aria-expanded={openPostMenuId === post.id}
-                          disabled={Boolean(deletingPostIds[post.id])}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setOpenPostMenuId((currentId) =>
-                              currentId === post.id ? null : post.id,
-                            )
-                          }}
-                        >
-                          ⋯
-                        </button>
-
-                        {openPostMenuId === post.id ? (
-                          <div className="absolute right-0 mt-2 min-w-[150px] overflow-hidden rounded-2xl border border-zinc-200 bg-white text-sm shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
-                            <button
-                              type="button"
-                              className="w-full px-4 py-3 text-left font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                              disabled={Boolean(deletingPostIds[post.id])}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                handleDeletePost(post)
-                              }}
-                            >
-                              {deletingPostIds[post.id] ? 'Deleting...' : 'Delete post'}
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
                   </div>
 
                   <div className="px-[18px] pt-4 pb-[18px]">

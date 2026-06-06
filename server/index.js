@@ -347,6 +347,24 @@ async function getProfileByUuid(accessCodeUuid) {
   }
 }
 
+async function isValidAccessCodeUuid(accessCodeUuid) {
+  if (!accessCodeUuid) {
+    return false
+  }
+
+  const result = await pool.query(
+    `
+      SELECT 1
+      FROM codes
+      WHERE uuid = $1
+      LIMIT 1
+    `,
+    [accessCodeUuid],
+  )
+
+  return result.rowCount > 0
+}
+
 function getSafeFileExtension(filename = '', mimeType = '') {
   const extensionFromName = filename.split('.').pop()?.toLowerCase()
 
@@ -486,6 +504,58 @@ app.get('/api/photos', async (request, response) => {
       ok: false,
       error:
         error instanceof Error ? error.message : 'Failed to load saved photos.',
+    })
+  }
+})
+
+app.get('/api/profiles', async (request, response) => {
+  const accessCodeUuid =
+    typeof request.headers['x-access-code-uuid'] === 'string'
+      ? request.headers['x-access-code-uuid'].trim()
+      : ''
+
+  if (!accessCodeUuid) {
+    response.status(401).json({
+      ok: false,
+      error: 'Access code is required.',
+    })
+    return
+  }
+
+  try {
+    if (!(await isValidAccessCodeUuid(accessCodeUuid))) {
+      response.status(403).json({
+        ok: false,
+        error: 'Invalid access code session.',
+      })
+      return
+    }
+
+    const result = await pool.query(
+      `
+        SELECT id, uuid, name, object_key, url_profile_pic, verified
+        FROM profiles
+        WHERE uuid IS NOT NULL
+          AND TRIM(uuid) <> ''
+        ORDER BY LOWER(name) ASC, id ASC
+      `,
+    )
+
+    response.status(200).json({
+      ok: true,
+      profiles: result.rows.map((row) => ({
+        id: String(row.id),
+        uuid: row.uuid,
+        name: row.name,
+        objectKey: row.object_key,
+        urlProfilePic: row.url_profile_pic,
+        verified: Boolean(row.verified),
+      })),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to load profiles.',
     })
   }
 })

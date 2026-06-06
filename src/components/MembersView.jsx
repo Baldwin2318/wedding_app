@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import ProfileAvatar from './ProfileAvatar'
 import VerifiedBadge from './VerifiedBadge'
 
@@ -29,6 +30,16 @@ function SearchIcon({ className = 'h-5 w-5' }) {
 }
 
 function MembersView({ members = [], onBack, onSelectMember }) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredMembers = normalizedQuery
+    ? members.filter((member) =>
+        String(member.author || '')
+          .toLowerCase()
+          .includes(normalizedQuery),
+      )
+    : members
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-white">
       <header className="shrink-0 border-b border-zinc-200 bg-white/95 px-4 pt-3 pb-3 backdrop-blur-xl">
@@ -49,17 +60,24 @@ function MembersView({ members = [], onBack, onSelectMember }) {
           <div className="h-10 w-10" />
         </div>
 
-        <div className="mx-auto mt-3 flex w-full max-w-[520px] items-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-zinc-500">
+        <label className="mx-auto mt-3 flex w-full max-w-[520px] items-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 text-zinc-500">
           <SearchIcon className="h-4 w-4" />
-          <span className="text-sm font-medium">Search</span>
-        </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search by name"
+            aria-label="Search members by name"
+            className="w-full bg-transparent text-sm font-medium text-zinc-950 outline-none placeholder:text-zinc-500"
+          />
+        </label>
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto bg-white">
         <div className="mx-auto w-full max-w-[520px] px-4 py-4">
-          {members.length > 0 ? (
+          {filteredMembers.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
                 <button
                   key={member.id}
                   type="button"
@@ -97,11 +115,13 @@ function MembersView({ members = [], onBack, onSelectMember }) {
                 </div>
 
                 <h3 className="text-base font-bold text-zinc-950">
-                  No members yet
+                  {members.length > 0 && normalizedQuery ? 'No matching members' : 'No members yet'}
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  Members will appear here after they upload photos or when you connect this page to your members data.
+                  {members.length > 0 && normalizedQuery
+                    ? 'Try a different name or clear the search.'
+                    : 'Members will appear here after they upload photos or when you connect this page to your members data.'}
                 </p>
               </div>
             </div>
