@@ -54,6 +54,59 @@ function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
   )
 }
 
+function MenuIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function AccountIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 14 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function MembersIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM15 10a2.5 2.5 0 1 0 0-5M3.5 20a5.5 5.5 0 0 1 11 0M14.5 20a4.5 4.5 0 0 1 6-4.25"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function LogoutIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M10 6H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4M15 8l4 4-4 4M8 12h11"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 const dummyPosts = [
   {
     id: 'dummy-1',
@@ -149,6 +202,8 @@ function NewsFeed({
   const [commentsError, setCommentsError] = useState('')
   const [openPostMenuId, setOpenPostMenuId] = useState(null)
   const [deletingPostIds, setDeletingPostIds] = useState({})
+  const [isNavOpen, setIsNavOpen] = useState(false)
+  const [isMembersOpen, setIsMembersOpen] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -727,6 +782,68 @@ function NewsFeed({
     }
   }
   
+
+    const members = Array.from(
+        new Map(
+            [
+            currentProfile
+                ? {
+                    id: String(currentProfile.uuid || currentProfile.id || 'current-user'),
+                    authorId: currentProfile.uuid || currentProfile.id,
+                    author: currentProfile.name || 'Guest',
+                    profileImage:
+                    currentProfile.urlProfilePic ||
+                    currentProfile.profileImage ||
+                    currentProfile.avatar ||
+                    '',
+                    verified: Boolean(currentProfile.verified),
+                }
+                : null,
+
+            ...photos
+                .filter((photo) => photo.authorId || photo.author)
+                .map((photo) => ({
+                id: String(photo.authorId || photo.author),
+                authorId: photo.authorId,
+                author: photo.author || 'Guest',
+                profileImage:
+                    photo.profileImage ||
+                    photo.profilePhoto ||
+                    photo.avatar ||
+                    photo.authorAvatar ||
+                    '',
+                verified: Boolean(photo.verified),
+                })),
+            ]
+            .filter(Boolean)
+            .map((member) => [member.id, member]),
+        ).values(),
+    )
+
+    function openCurrentUserProfile() {
+    setIsNavOpen(false)
+
+    setSelectedProfile({
+        authorId: currentProfile?.uuid,
+        author: currentProfile?.name || 'Guest',
+        profileImage: currentProfile?.urlProfilePic || currentProfile?.profileImage || '',
+        verified: Boolean(currentProfile?.verified),
+    })
+    }
+
+    function openMembers() {
+    setIsNavOpen(false)
+    setIsMembersOpen(true)
+    }
+
+    function closeMembers() {
+    setIsMembersOpen(false)
+    }
+
+    function openMemberProfile(member) {
+    setSelectedProfile(member)
+    }
+  
   return (
     <section className="fixed inset-0 flex min-h-0 w-full flex-col overflow-hidden bg-zinc-50">
       <input
@@ -748,46 +865,63 @@ function NewsFeed({
             Happy Memories 🌺
           </button>
 
-          {hasVerifiedAccess ? (
-            <div className="flex shrink-0 items-center gap-2">
-              <button
+            {hasVerifiedAccess ? (
+            <div className="relative">
+                <button
                 type="button"
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-950 transition ${
-                  canUploadPhotos
-                    ? 'bg-zinc-100 hover:bg-zinc-200'
-                    : 'cursor-not-allowed bg-zinc-100 opacity-45'
-                }`}
-                onClick={handleOpenUploadPicker}
-                disabled={isUploading || !canUploadPhotos}
-                aria-label="Add photo"
-              >
-                +
-              </button>
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 shadow-sm transition hover:bg-zinc-200 active:scale-95"
+                onClick={() => setIsNavOpen((current) => !current)}
+                aria-label="Open navigation menu"
+                aria-expanded={isNavOpen}
+                >
+                <MenuIcon className="h-5 w-5" />
+                </button>
 
-              <button
-                type="button"
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-zinc-950 transition ${
-                  canUploadPhotos
-                    ? 'bg-zinc-100 hover:bg-zinc-200'
-                    : 'cursor-not-allowed bg-zinc-100 opacity-45'
-                }`}
-                onClick={handleOpenCamera}
-                disabled={!canUploadPhotos}
-                aria-label="Take picture"
-              >
-                <MinimalCameraIcon className="h-5 w-5" />
-              </button>
+                {isNavOpen ? (
+                <div className="absolute right-0 top-12 z-40 w-56 overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
+                    <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100"
+                    onClick={openCurrentUserProfile}
+                    >
+                    <AccountIcon className="h-5 w-5" />
+                    My account
+                    </button>
+
+                    <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100"
+                    onClick={openMembers}
+                    >
+                    <MembersIcon className="h-5 w-5" />
+                    See members
+                    </button>
+
+                    <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                    onClick={() => {
+                        setIsNavOpen(false)
+                        onLogout?.()
+                    }}
+                    >
+                    <LogoutIcon className="h-5 w-5" />
+                    Logout
+                    </button>
+                </div>
+                ) : null}
             </div>
-          ) : (
+            ) : (
             <button
-              type="button"
-              className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => requestPhotoAccess?.()}
-              disabled={isVerifyingAccessCode}
+                type="button"
+                className="rounded-full bg-zinc-950 px-5 py-2 text-sm font-semibold text-white shadow-sm transition active:scale-95 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => requestPhotoAccess?.()}
+                disabled={isVerifyingAccessCode}
             >
-              {isVerifyingAccessCode ? 'Checking...' : 'Login'}
+                {isVerifyingAccessCode ? 'Checking...' : 'Login'}
             </button>
-          )}
+            )}
+
         </div>
        </div>
 
@@ -837,6 +971,32 @@ function NewsFeed({
               {pendingNewPhotoCount} new {pendingNewPhotoCount === 1 ? 'memory' : 'memories'}
             </button>
           ) : null}
+
+        {canUploadPhotos ? (
+            <div className="mx-auto flex w-full max-w-[520px] items-center justify-center gap-3">
+                <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={handleOpenUploadPicker}
+                disabled={isUploading || !canUploadPhotos}
+                aria-label="Upload a photo"
+                >
+                <span className="text-lg leading-none">+</span>
+                <span>Upload a photo</span>
+                </button>
+
+                <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 shadow-sm transition hover:bg-zinc-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={handleOpenCamera}
+                disabled={!canUploadPhotos}
+                aria-label="Take a photo"
+                >
+                <MinimalCameraIcon className="h-5 w-5" />
+                <span>Take a photo</span>
+                </button>
+            </div>
+        ) : null}
 
           {posts.map((post) => {
             const isDummyPost = post.id?.startsWith?.('dummy-')
@@ -1121,6 +1281,14 @@ function NewsFeed({
           />
         </button>
       ) : null}
+
+      {isMembersOpen ? (
+        <MembersView
+            members={members}
+            onBack={closeMembers}
+            onSelectMember={openMemberProfile}
+        />
+        ) : null}
 
       {selectedProfile ? (
         <ProfileView
