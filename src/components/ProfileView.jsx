@@ -1,6 +1,26 @@
 import ProfileAvatar from './ProfileAvatar'
 import VerifiedBadge from './VerifiedBadge'
 
+function PencilIcon({ className = 'h-5 w-5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 20h4l10-10-4-4L4 16v4Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m12.5 7.5 4 4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 function getPostAuthorKey(post) {
   return String(post?.authorId || post?.userId || post?.author || '').trim().toLowerCase()
 }
@@ -9,7 +29,14 @@ function getProfileImage(post) {
   return post?.profileImage || post?.profilePhoto || post?.avatar || post?.authorAvatar || ''
 }
 
-function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
+function ProfileView({
+  profile,
+  posts = [],
+  onBack,
+  onSelectPhoto,
+  canEditProfile = false,
+  onEditProfile,
+}) {
   if (!profile) {
     return null
   }
@@ -55,6 +82,16 @@ function ProfileView({ profile, posts = [], onBack, onSelectPhoto }) {
                   {userPosts.length === 1 ? '1 post' : `${userPosts.length} posts`}
                 </p>
               </div>
+              {canEditProfile ? (
+                <button
+                  type="button"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-950 shadow-sm transition hover:bg-zinc-100 active:scale-95"
+                  onClick={onEditProfile}
+                  aria-label="Edit profile"
+                >
+                  <PencilIcon />
+                </button>
+              ) : null}
             </div>
           </div>
 

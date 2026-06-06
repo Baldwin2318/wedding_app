@@ -69,19 +69,6 @@ function MenuIcon({ className = 'h-5 w-5' }) {
   )
 }
 
-function AccountIcon({ className = 'h-5 w-5' }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 14 0"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
 function MembersIcon({ className = 'h-5 w-5' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -905,7 +892,16 @@ function NewsFeed({
                     className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100"
                     onClick={openCurrentUserProfile}
                     >
-                    <AccountIcon className="h-5 w-5" />
+                    <ProfileAvatar
+                      src={
+                        currentProfile?.urlProfilePic ||
+                        currentProfile?.profileImage ||
+                        currentProfile?.avatar ||
+                        ''
+                      }
+                      name={currentProfile?.name || 'Guest'}
+                      className="h-5 w-5 shadow-none ring-0"
+                    />
                     My account
                     </button>
 
@@ -1249,7 +1245,7 @@ function NewsFeed({
         </div>
       ) : null}
 
-      {hasVerifiedAccess ? (
+      {/* {hasVerifiedAccess ? (
         <button
           type="button"
           className="fixed bottom-6 right-5 z-30 inline-flex h-15 w-15 items-center justify-center rounded-full bg-white/88 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5 backdrop-blur-xl transition active:scale-95"
@@ -1262,7 +1258,7 @@ function NewsFeed({
             className="h-12 w-12 shadow-none ring-0"
           />
         </button>
-      ) : null}
+      ) : null} */}
 
       {isMembersOpen ? (
         <MembersView
@@ -1278,6 +1274,11 @@ function NewsFeed({
           posts={photos}
           onBack={closeSelectedProfile}
           onSelectPhoto={setSelectedPhoto}
+          canEditProfile={
+            canEditProfile &&
+            String(selectedProfile?.authorId || '') === String(currentProfile?.uuid || currentProfile?.id || '')
+          }
+          onEditProfile={openProfileSettings}
         />
       ) : null}
       
