@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
 import CommentIcon from './CommentIcon'
+import ProfileAvatar from './ProfileAvatar'
+import VerifiedBadge from './VerifiedBadge'
+import { formatRelativeTime } from './CommentsSheet'
 
 function HeartIcon({ className = 'h-6 w-6', isLiked = false }) {
   return (
@@ -57,6 +60,11 @@ export default function PhotoViewer({
   const isLiked = Boolean(photo.likedByCurrentVisitor)
   const likesCount = Number(photo.likesCount) || 0
   const commentsCount = Number(photo.commentsCount) || 0
+  const authorName = photo.author || 'Guest'
+  const isVerified = Boolean(photo.verified)
+  const postTime = formatRelativeTime(photo.createdAt)
+  const authorProfileImage =
+    photo.profileImage || photo.profilePhoto || photo.avatar || photo.authorAvatar || ''
 
   return (
     <div
@@ -115,6 +123,29 @@ export default function PhotoViewer({
           className="max-h-[calc(100vh-2rem)] max-w-full select-none rounded-2xl object-contain"
           draggable={false}
         />
+
+        <div className="absolute bottom-4 left-4 flex max-w-[calc(100%-8rem)] items-center gap-2 rounded-full px-2 py-2 text-white">
+          <ProfileAvatar
+            src={authorProfileImage}
+            name={authorName}
+            className="h-8 w-8 bg-transparent p-0 shadow-none ring-0"
+          />
+          <div className="min-w-0 pr-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate text-sm font-semibold tracking-[-0.01em] text-white">
+                {authorName}
+              </span>
+              {isVerified ? (
+                <VerifiedBadge className="h-[14px] w-[14px]" checkClassName="h-[9px] w-[9px]" />
+              ) : null}
+            </div>
+            {postTime ? (
+              <p className="mt-0.5 truncate text-[11px] font-medium text-white/70">
+                {postTime} ago
+              </p>
+            ) : null}
+          </div>
+        </div>
 
         <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-white shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
           <button

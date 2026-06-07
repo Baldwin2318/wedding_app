@@ -47,7 +47,7 @@ function useBrowserBackStack() {
     pushedViewIdsRef.current = [...pushedViewIdsRef.current, viewId]
     closeHandlersRef.current = [...closeHandlersRef.current, closeView]
 
-    return () => {
+    const dispose = () => {
       const index = pushedViewIdsRef.current.indexOf(viewId)
 
       if (index === -1) {
@@ -64,6 +64,21 @@ function useBrowserBackStack() {
       pushedViewIdsRef.current = pushedViewIdsRef.current.filter((id) => id !== viewId)
       closeView()
     }
+
+    dispose.remove = () => {
+      const index = pushedViewIdsRef.current.indexOf(viewId)
+
+      if (index === -1) {
+        closeView()
+        return
+      }
+
+      closeHandlersRef.current = closeHandlersRef.current.filter((_, handlerIndex) => handlerIndex !== index)
+      pushedViewIdsRef.current = pushedViewIdsRef.current.filter((id) => id !== viewId)
+      closeView()
+    }
+
+    return dispose
   }, [])
 
   useEffect(() => {

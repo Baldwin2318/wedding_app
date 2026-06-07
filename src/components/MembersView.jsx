@@ -2,6 +2,47 @@ import { useState } from 'react'
 import ProfileAvatar from './ProfileAvatar'
 import VerifiedBadge from './VerifiedBadge'
 
+function formatLastActive(value) {
+  if (!value) {
+    return ''
+  }
+
+  const timestamp = new Date(value).getTime()
+
+  if (Number.isNaN(timestamp)) {
+    return ''
+  }
+
+  const seconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000))
+
+  if (seconds < 60) {
+    return 'Active now'
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) {
+    return `Active ${minutes}m ago`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `Active ${hours}h ago`
+  }
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) {
+    return `Active ${days}d ago`
+  }
+
+  const weeks = Math.floor(days / 7)
+  if (weeks < 52) {
+    return `Active ${weeks}w ago`
+  }
+
+  const years = Math.floor(days / 365)
+  return `Active ${years}y ago`
+}
+
 function BackIcon({ className = 'h-5 w-5' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -94,16 +135,20 @@ function MembersView({ members = [], onBack, onSelectMember }) {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex min-w-0 items-center gap-1.5 px-1">
-                    <span className="truncate text-sm font-bold text-zinc-950">
-                      {member.author}
-                    </span>
-                    {member.verified ? <VerifiedBadge /> : null}
-                  </div>
+                  <div className="mt-3 min-w-0 px-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-bold text-zinc-950">
+                        {member.author}
+                      </span>
+                      {member.verified ? <VerifiedBadge /> : null}
+                    </div>
 
-                  <p className="mt-0.5 truncate px-1 text-xs font-medium text-zinc-500">
-                    View profile
-                  </p>
+                    {formatLastActive(member.lastActiveAt) ? (
+                      <p className="mt-0.5 truncate text-xs font-medium text-zinc-500">
+                        {formatLastActive(member.lastActiveAt)}
+                      </p>
+                    ) : null}
+                  </div>
                 </button>
               ))}
             </div>

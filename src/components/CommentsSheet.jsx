@@ -29,6 +29,70 @@ export function formatRelativeTime(value) {
   return `${years}y`
 }
 
+function HeartIcon({ className = 'h-4 w-4' }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 20.5 4.9 13.9a4.78 4.78 0 0 1 0-6.8 4.71 4.71 0 0 1 6.72 0L12 7.49l.38-.39a4.71 4.71 0 0 1 6.72 0 4.78 4.78 0 0 1 0 6.8L12 20.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+function formatLikesSummary(post) {
+  const likesCount = Number(post?.likesCount) || 0
+  const likerNames = Array.isArray(post?.likerNames)
+    ? post.likerNames.filter((name) => String(name || '').trim())
+    : []
+  const previewNames = likerNames.slice(0, 2)
+  const remainingCount = Math.max(likesCount - previewNames.length, 0)
+
+  if (previewNames.length === 0) {
+    return likesCount > 0
+      ? `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`
+      : 'No likes yet'
+  }
+
+  if (remainingCount > 0) {
+    return `${previewNames.join(', ')}, ${remainingCount}+ ${remainingCount === 1 ? 'person' : 'people'}`
+  }
+
+  return previewNames.join(', ')
+}
+
+function LikerPreviewAvatars({ post }) {
+  const likerPreview = Array.isArray(post?.likerPreview)
+    ? post.likerPreview.filter((entry) => String(entry?.name || '').trim()).slice(0, 2)
+    : []
+
+  if (likerPreview.length === 0) {
+    return <HeartIcon className="h-[15px] w-[15px] shrink-0 text-zinc-950" />
+  }
+
+  return (
+    <div className="flex shrink-0 items-center">
+      {likerPreview.map((entry, index) => (
+        <div
+          key={`${entry.name}-${index}`}
+          className={index > 0 ? '-ml-2' : ''}
+        >
+          <ProfileAvatar
+            src={entry.profileImageUrl || ''}
+            name={entry.name || 'Guest'}
+            className="h-6 w-6 border border-white shadow-none ring-0"
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function CommentRow({ comment, onEdit, onDelete }) {
   return (
     <div className="flex gap-3 px-4 py-3">
@@ -74,6 +138,7 @@ function CommentsSheet({
   error = '',
   canComment = false,
   currentProfile = null,
+  onOpenLikes,
   onClose,
   onSubmit,
   onEdit,
@@ -84,11 +149,7 @@ function CommentsSheet({
   const inputRef = useRef(null)
   
   const trimmedDraft = draft.trim()
-  const title = useMemo(() => {
-    const count = comments.length
-
-    return count === 1 ? '1 comment' : `${count} comments`
-  }, [comments.length])
+  const likesSummary = useMemo(() => formatLikesSummary(post), [post])
 
   useEffect(() => {
     setDraft('')
@@ -138,8 +199,18 @@ function CommentsSheet({
       />
 
       <section className="relative flex max-h-[calc(100dvh-3rem)] min-h-[52vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[32px] bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
-        <header className="relative shrink-0 border-b border-zinc-200 px-12 py-3 text-center">
-          <h2 className="truncate text-base font-semibold text-zinc-950">{title}</h2>
+        <header className="relative shrink-0 border-b border-zinc-200 px-4 py-3">
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-2 pr-12 text-left"
+            onClick={() => onOpenLikes?.(post)}
+            aria-label="Open likes list"
+          >
+            <LikerPreviewAvatars post={post} />
+            <h2 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-zinc-950">
+              {likesSummary}
+            </h2>
+          </button>
         
           <button
             type="button"

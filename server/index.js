@@ -461,12 +461,37 @@ app.get('/api/photos', async (request, response) => {
           COALESCE(profiles.verified, FALSE) AS uploader_verified,
           photo_captures.created_at,
           photo_captures.likes_count,
+          COALESCE(like_preview.liker_names, ARRAY[]::TEXT[]) AS liker_names,
+          COALESCE(like_preview.liker_preview, '[]'::JSON) AS liker_preview,
           photo_capture_likes.photo_capture_id IS NOT NULL AS liked_by_current_visitor,
           photo_captures.comments_count
         FROM photo_captures
         LEFT JOIN photo_capture_likes
           ON photo_capture_likes.photo_capture_id = photo_captures.id
           AND photo_capture_likes.visitor_identity = $1
+        LEFT JOIN LATERAL (
+          SELECT
+            ARRAY_AGG(named_likes.name ORDER BY named_likes.created_at DESC) AS liker_names,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'name', named_likes.name,
+                'profileImageUrl', COALESCE(named_likes.url_profile_pic, '')
+              )
+              ORDER BY named_likes.created_at DESC
+            ) AS liker_preview
+          FROM (
+            SELECT profiles.name, profiles.url_profile_pic, photo_capture_likes.created_at
+            FROM photo_capture_likes
+            JOIN profiles
+              ON photo_capture_likes.visitor_identity LIKE 'code:%'
+              AND profiles.uuid = SUBSTRING(photo_capture_likes.visitor_identity FROM 6)
+            WHERE photo_capture_likes.photo_capture_id = photo_captures.id
+              AND TRIM(profiles.name) <> ''
+            ORDER BY photo_capture_likes.created_at DESC
+            LIMIT 2
+          ) AS named_likes
+        ) AS like_preview
+          ON TRUE
         LEFT JOIN profiles
           ON photo_captures.visitor_identity LIKE 'code:%'
           AND profiles.uuid = SUBSTRING(photo_captures.visitor_identity FROM 6)
@@ -489,6 +514,8 @@ app.get('/api/photos', async (request, response) => {
         imageUrl: buildPublicImageUrl(row.object_key, row.image_url),
         caption: row.caption,
         likesCount: row.likes_count,
+        likerNames: Array.isArray(row.liker_names) ? row.liker_names : [],
+        likerPreview: Array.isArray(row.liker_preview) ? row.liker_preview : [],
         likedByCurrentVisitor: row.liked_by_current_visitor,
         ipAddress: row.ip_address,
         uploaderName: row.uploader_name,
@@ -533,8 +560,37 @@ app.get('/api/profiles', async (request, response) => {
 
     const result = await pool.query(
       `
-        SELECT id, uuid, name, object_key, url_profile_pic, verified
+        SELECT
+          profiles.id,
+          profiles.uuid,
+          profiles.name,
+          profiles.object_key,
+          profiles.url_profile_pic,
+          profiles.verified,
+          GREATEST(
+            COALESCE(photo_activity.last_created_at, '-infinity'::timestamptz),
+            COALESCE(like_activity.last_created_at, '-infinity'::timestamptz),
+            COALESCE(comment_activity.last_created_at, '-infinity'::timestamptz)
+          ) AS last_active_at
         FROM profiles
+        LEFT JOIN LATERAL (
+          SELECT MAX(created_at) AS last_created_at
+          FROM photo_captures
+          WHERE visitor_identity = CONCAT('code:', profiles.uuid)
+        ) AS photo_activity
+          ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT MAX(created_at) AS last_created_at
+          FROM photo_capture_likes
+          WHERE visitor_identity = CONCAT('code:', profiles.uuid)
+        ) AS like_activity
+          ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT MAX(created_at) AS last_created_at
+          FROM photo_capture_comments
+          WHERE profile_uuid = profiles.uuid
+        ) AS comment_activity
+          ON TRUE
         WHERE uuid IS NOT NULL
           AND TRIM(uuid) <> ''
         ORDER BY LOWER(name) ASC, id ASC
@@ -550,6 +606,10 @@ app.get('/api/profiles', async (request, response) => {
         objectKey: row.object_key,
         urlProfilePic: row.url_profile_pic,
         verified: Boolean(row.verified),
+        lastActiveAt:
+          row.last_active_at && row.last_active_at !== '-infinity'
+            ? row.last_active_at
+            : null,
       })),
     })
   } catch (error) {
@@ -1028,6 +1088,65 @@ app.get('/api/photos/:id/comments', async (request, response) => {
       ok: false,
       error:
         error instanceof Error ? error.message : 'Failed to load comments.',
+    })
+  }
+})
+
+app.get('/api/photos/:id/likes', async (request, response) => {
+  const { id } = request.params
+
+  try {
+    const photoResult = await pool.query(
+      `
+        SELECT id
+        FROM photo_captures
+        WHERE id = $1
+        LIMIT 1
+      `,
+      [id],
+    )
+
+    if (photoResult.rowCount === 0) {
+      response.status(404).json({
+        ok: false,
+        error: 'Photo not found.',
+      })
+      return
+    }
+
+    const result = await pool.query(
+      `
+        SELECT
+          profiles.uuid,
+          profiles.name,
+          profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS verified,
+          photo_capture_likes.created_at
+        FROM photo_capture_likes
+        JOIN profiles
+          ON photo_capture_likes.visitor_identity LIKE 'code:%'
+          AND profiles.uuid = SUBSTRING(photo_capture_likes.visitor_identity FROM 6)
+        WHERE photo_capture_likes.photo_capture_id = $1
+          AND TRIM(profiles.name) <> ''
+        ORDER BY photo_capture_likes.created_at DESC, profiles.name ASC
+      `,
+      [id],
+    )
+
+    response.status(200).json({
+      ok: true,
+      likes: result.rows.map((row) => ({
+        uuid: row.uuid || '',
+        name: row.name || 'Guest',
+        profileImageUrl: row.url_profile_pic || '',
+        verified: Boolean(row.verified),
+        createdAt: row.created_at,
+      })),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to load likes.',
     })
   }
 })

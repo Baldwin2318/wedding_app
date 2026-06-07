@@ -11,6 +11,7 @@ import FeedSkeletonCard from './FeedSkeletonCard'
 import VerifiedBadge from './VerifiedBadge'
 import CommentIcon from './CommentIcon'
 import CommentsSheet, { formatRelativeTime } from './CommentsSheet'
+import LikesSheet from './LikesSheet'
 import MembersView from './MembersView'
 import { fetchMembers } from '../lib/fetchMembers'
 
@@ -131,6 +132,7 @@ function NewsFeed({
   onRefreshPhotos,
   onTogglePhotoLike,
   onLoadPhotoComments,
+  onLoadPhotoLikes,
   onAddPhotoComment,
   onUpdatePhotoComment,
   onDeletePhotoComment,
@@ -185,11 +187,16 @@ function NewsFeed({
   const photoHistoryDisposeRef = useRef(null)
   const profileSettingsHistoryDisposeRef = useRef(null)
   const commentsHistoryDisposeRef = useRef(null)
+  const likesHistoryDisposeRef = useRef(null)
   const [commentSheetPost, setCommentSheetPost] = useState(null)
+  const [likesSheetPost, setLikesSheetPost] = useState(null)
   const [commentsByPhotoId, setCommentsByPhotoId] = useState({})
+  const [likesByPhotoId, setLikesByPhotoId] = useState({})
   const [isLoadingComments, setIsLoadingComments] = useState(false)
+  const [isLoadingLikes, setIsLoadingLikes] = useState(false)
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [commentsError, setCommentsError] = useState('')
+  const [likesError, setLikesError] = useState('')
   const [deletingPostIds, setDeletingPostIds] = useState({})
   const [isNavOpen, setIsNavOpen] = useState(false)
   const [isMembersOpen, setIsMembersOpen] = useState(false)
@@ -218,6 +225,7 @@ function NewsFeed({
             author: profile.name || 'Guest',
             profileImage: profile.urlProfilePic || '',
             verified: Boolean(profile.verified),
+            lastActiveAt: profile.lastActiveAt || '',
           })),
         )
       } catch (error) {
@@ -293,6 +301,14 @@ function NewsFeed({
     setSelectedProfile(post)
   }
 
+  function openProfileFromLikes(likeProfile) {
+    likesHistoryDisposeRef.current?.remove?.()
+    likesHistoryDisposeRef.current = null
+    commentsHistoryDisposeRef.current?.remove?.()
+    commentsHistoryDisposeRef.current = null
+    setSelectedProfile(likeProfile)
+  }
+
   function openProfileSettings() {
     setProfileSaveError('')
     setIsProfileSettingsOpen(true)
@@ -318,6 +334,18 @@ function NewsFeed({
     }
   
     setCommentSheetPost(null)
+  }
+
+  function closeLikesSheet() {
+    if (likesHistoryDisposeRef.current) {
+      const dispose = likesHistoryDisposeRef.current
+      likesHistoryDisposeRef.current = null
+      dispose()
+      return
+    }
+
+    setLikesSheetPost(null)
+    setLikesError('')
   }
 
   function closeSelectedProfile() {
@@ -553,6 +581,32 @@ function NewsFeed({
       )
     } finally {
       setIsLoadingComments(false)
+    }
+  }
+
+  async function openLikesSheet(post) {
+    if (!post?.id) {
+      return
+    }
+
+    setLikesSheetPost(post)
+    setLikesError('')
+
+    if (likesByPhotoId[post.id]) {
+      return
+    }
+
+    try {
+      setIsLoadingLikes(true)
+      const likes = await onLoadPhotoLikes?.(post.id)
+      setLikesByPhotoId((current) => ({
+        ...current,
+        [post.id]: likes || [],
+      }))
+    } catch (error) {
+      setLikesError(error instanceof Error ? error.message : 'Failed to load likes.')
+    } finally {
+      setIsLoadingLikes(false)
     }
   }
   
@@ -805,6 +859,21 @@ function NewsFeed({
       commentsHistoryDisposeRef.current = null
     }
   }, [commentSheetPost, pushView])
+
+  useEffect(() => {
+    if (likesSheetPost && !likesHistoryDisposeRef.current) {
+      likesHistoryDisposeRef.current = pushView('likes-sheet', () => {
+        likesHistoryDisposeRef.current = null
+        setLikesSheetPost(null)
+        setLikesError('')
+      })
+      return
+    }
+
+    if (!likesSheetPost) {
+      likesHistoryDisposeRef.current = null
+    }
+  }, [likesSheetPost, pushView])
   
   async function handleSaveProfile({ name, file }) {
     try {
@@ -1311,10 +1380,20 @@ function NewsFeed({
         error={commentsError}
         canComment={canLikePhotos}
         currentProfile={currentProfile}
+        onOpenLikes={openLikesSheet}
         onClose={closeCommentsSheet}
         onSubmit={handleSubmitComment}
         onEdit={handleEditComment}
         onDelete={handleDeleteComment}
+      />
+
+      <LikesSheet
+        post={likesSheetPost}
+        likes={likesSheetPost ? likesByPhotoId[likesSheetPost.id] || [] : []}
+        isLoading={isLoadingLikes}
+        error={likesError}
+        onClose={closeLikesSheet}
+        onSelectProfile={openProfileFromLikes}
       />
       
       <ProfileSettings

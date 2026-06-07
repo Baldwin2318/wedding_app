@@ -19,6 +19,7 @@ import {
   addPhotoComment,
   deletePhotoComment,
   fetchPhotoComments,
+  fetchPhotoLikes,
   updatePhotoComment,
 } from './lib/photoComments'
 
@@ -39,6 +40,8 @@ function mapSavedPhotoToFeedPhoto(photo) {
     image: photo.imageUrl,
     caption: photo.caption || 'Wedding memory',
     likesCount: photo.likesCount ?? null,
+    likerNames: Array.isArray(photo.likerNames) ? photo.likerNames : [],
+    likerPreview: Array.isArray(photo.likerPreview) ? photo.likerPreview : [],
     likedByCurrentVisitor: Boolean(photo.likedByCurrentVisitor),
     author: photo.uploaderName || 'Guest',
     authorId: photo.uploaderUuid || '',
@@ -425,6 +428,38 @@ function App() {
           ? {
               ...photo,
               likesCount: likedPhoto.likesCount,
+              likerNames: (() => {
+                const currentNames = Array.isArray(photo.likerNames) ? photo.likerNames : []
+                const currentUserName = String(currentProfile?.name || '').trim()
+
+                if (!currentUserName) {
+                  return currentNames
+                }
+
+                if (likedPhoto.likedByCurrentVisitor) {
+                  return [currentUserName, ...currentNames.filter((name) => name !== currentUserName)]
+                }
+
+                return currentNames.filter((name) => name !== currentUserName)
+              })(),
+              likerPreview: (() => {
+                const currentPreview = Array.isArray(photo.likerPreview) ? photo.likerPreview : []
+                const currentUserName = String(currentProfile?.name || '').trim()
+                const currentUserAvatar = String(currentProfile?.urlProfilePic || '').trim()
+
+                if (!currentUserName) {
+                  return currentPreview
+                }
+
+                if (likedPhoto.likedByCurrentVisitor) {
+                  return [
+                    { name: currentUserName, profileImageUrl: currentUserAvatar },
+                    ...currentPreview.filter((entry) => entry?.name !== currentUserName),
+                  ].slice(0, 2)
+                }
+
+                return currentPreview.filter((entry) => entry?.name !== currentUserName).slice(0, 2)
+              })(),
               likedByCurrentVisitor: likedPhoto.likedByCurrentVisitor,
             }
           : photo,
@@ -645,6 +680,10 @@ function App() {
   async function handleUpdatePhotoComment(photoId, commentId, body) {
     return updatePhotoComment(photoId, commentId, body)
   }
+
+  async function handleLoadPhotoLikes(photoId) {
+    return fetchPhotoLikes(photoId)
+  }
   
   async function handleDeletePhotoComment(photoId, commentId) {
     const result = await deletePhotoComment(photoId, commentId)
@@ -767,6 +806,7 @@ function App() {
         onRefreshPhotos={handleLoadNewPhotos}
         onTogglePhotoLike={handleTogglePhotoLike}
         onLoadPhotoComments={handleLoadPhotoComments}
+        onLoadPhotoLikes={handleLoadPhotoLikes}
         onAddPhotoComment={handleAddPhotoComment}
         onUpdatePhotoComment={handleUpdatePhotoComment}
         onDeletePhotoComment={handleDeletePhotoComment}

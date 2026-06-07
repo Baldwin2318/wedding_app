@@ -22,6 +22,18 @@ export async function fetchPhotoComments(photoId) {
   return Array.isArray(payload?.comments) ? payload.comments : []
 }
 
+export async function fetchPhotoLikes(photoId) {
+  const response = await fetch(`/api/photos/${photoId}/likes`, {
+    headers: {
+      ...getAccessCodeHeaders(),
+    },
+  })
+
+  const payload = await readJsonResponse(response, 'Failed to load likes.')
+
+  return Array.isArray(payload?.likes) ? payload.likes : []
+}
+
 export async function addPhotoComment(photoId, body) {
   const response = await fetch(`/api/photos/${photoId}/comments`, {
     method: 'POST',
