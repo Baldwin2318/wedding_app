@@ -276,6 +276,12 @@ function NewsFeed({
   
     try {
       await onTogglePhotoLike(postId, nextIsLiked)
+
+      setOptimisticLikes((current) => {
+        const next = { ...current }
+        delete next[postId]
+        return next
+      })
     } catch (error) {
       console.error('Failed to like photo:', error)
   
