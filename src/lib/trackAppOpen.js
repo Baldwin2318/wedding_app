@@ -1,8 +1,11 @@
+import { getAccessCodeHeaders } from './accessCode'
+
 export async function trackAppOpen() {
   const response = await fetch('/api/visitors', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...getAccessCodeHeaders(),
     },
     body: JSON.stringify({}),
   })

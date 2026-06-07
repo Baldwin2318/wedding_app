@@ -159,6 +159,13 @@ async function ensureDatabaseSchema() {
   `)
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS profile_app_opens (
+      profile_uuid TEXT PRIMARY KEY REFERENCES profiles(uuid) ON DELETE CASCADE,
+      last_opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `)
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS photo_capture_comments (
       id BIGSERIAL PRIMARY KEY,
       photo_capture_id BIGINT NOT NULL REFERENCES photo_captures(id) ON DELETE CASCADE,
@@ -568,11 +575,19 @@ app.get('/api/profiles', async (request, response) => {
           profiles.url_profile_pic,
           profiles.verified,
           GREATEST(
+            COALESCE(app_open_activity.last_opened_at, '-infinity'::timestamptz),
             COALESCE(photo_activity.last_created_at, '-infinity'::timestamptz),
             COALESCE(like_activity.last_created_at, '-infinity'::timestamptz),
             COALESCE(comment_activity.last_created_at, '-infinity'::timestamptz)
           ) AS last_active_at
         FROM profiles
+        LEFT JOIN LATERAL (
+          SELECT last_opened_at
+          FROM profile_app_opens
+          WHERE profile_uuid = profiles.uuid
+          LIMIT 1
+        ) AS app_open_activity
+          ON TRUE
         LEFT JOIN LATERAL (
           SELECT MAX(created_at) AS last_created_at
           FROM photo_captures
@@ -647,6 +662,7 @@ app.get('/api/photos/stream', (request, response) => {
 
 app.post('/api/visitors', async (request, response) => {
   const ipAddress = getRequestIpAddress(request)
+  const accessCodeUuid = getAccessCodeUuid(request)
 
   try {
     const result = await pool.query(
@@ -659,6 +675,18 @@ app.post('/api/visitors', async (request, response) => {
       `,
       [ipAddress],
     )
+
+    if (accessCodeUuid && !isAnonymousAccessCodeUuid(accessCodeUuid)) {
+      await pool.query(
+        `
+          INSERT INTO profile_app_opens (profile_uuid, last_opened_at)
+          VALUES ($1, NOW())
+          ON CONFLICT (profile_uuid)
+          DO UPDATE SET last_opened_at = EXCLUDED.last_opened_at
+        `,
+        [accessCodeUuid],
+      )
+    }
 
     response.status(200).json({
       ok: true,
