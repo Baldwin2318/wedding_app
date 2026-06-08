@@ -20,11 +20,8 @@ CREATE TABLE IF NOT EXISTS photo_capture_likes (
   ip_address TEXT NOT NULL,
   visitor_identity TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (photo_capture_id, ip_address)
+  PRIMARY KEY (photo_capture_id, visitor_identity)
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS photo_capture_likes_photo_identity_idx
-ON photo_capture_likes (photo_capture_id, visitor_identity);
 
 CREATE TABLE IF NOT EXISTS profiles (
   id BIGSERIAL PRIMARY KEY,
