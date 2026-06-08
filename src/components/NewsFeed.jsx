@@ -1493,6 +1493,7 @@ function NewsFeed({
         onDelete={handleDeleteComment}
         onToggleCommentLike={handleToggleCommentLike}
         onOpenCommentLikes={openCommentLikesSheet}
+        isVerified = {isVerifyingAccessCode}
       />
 
       <LikesSheet
