@@ -97,6 +97,18 @@ export async function togglePhotoCommentLike(photoId, commentId, shouldLike) {
     shouldLike ? 'Failed to like comment.' : 'Failed to unlike comment.',
   )
 
+  export async function fetchPhotoCommentLikes(photoId, commentId) {
+    const response = await fetch(`/api/photos/${photoId}/comments/${commentId}/likes`, {
+      headers: {
+        ...getAccessCodeHeaders(),
+      },
+    })
+  
+    const payload = await readJsonResponse(response, 'Failed to load comment likes.')
+  
+    return Array.isArray(payload?.likes) ? payload.likes : []
+  }
+    
   return {
     id: String(payload?.id || commentId),
     photoId: String(payload?.photoId || photoId),
