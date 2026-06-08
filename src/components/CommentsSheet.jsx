@@ -29,7 +29,7 @@ export function formatRelativeTime(value) {
   return `${years}y`
 }
 
-function HeartIcon({ className = 'h-4 w-4' }) {
+function HeartIcon({ className = 'h-4 w-4', isLiked = false }) {
   return (
     <svg
       aria-hidden="true"
@@ -39,7 +39,10 @@ function HeartIcon({ className = 'h-4 w-4' }) {
     >
       <path
         d="M12 20.5 4.9 13.9a4.78 4.78 0 0 1 0-6.8 4.71 4.71 0 0 1 6.72 0L12 7.49l.38-.39a4.71 4.71 0 0 1 6.72 0 4.78 4.78 0 0 1 0 6.8L12 20.5Z"
-        fill="currentColor"
+        fill={isLiked ? '#ef4444' : 'none'}
+        stroke={isLiked ? '#ef4444' : 'currentColor'}
+        strokeLinejoin="round"
+        strokeWidth="1.9"
       />
     </svg>
   )
@@ -93,7 +96,10 @@ function LikerPreviewAvatars({ post }) {
   )
 }
 
-function CommentRow({ comment, onEdit, onDelete }) {
+function CommentRow({ comment, onEdit, onDelete, onToggleLike }) {
+  const likesCount = Number(comment.likesCount) || 0
+  const isLiked = Boolean(comment.likedByCurrentVisitor)
+
   return (
     <div className="flex gap-3 px-4 py-3">
       <ProfileAvatar
@@ -114,6 +120,15 @@ function CommentRow({ comment, onEdit, onDelete }) {
         <div className="mt-1 flex items-center gap-4 text-xs font-medium text-zinc-500">
           <span>{formatRelativeTime(comment.createdAt)}</span>
 
+          <button
+            type="button"
+            className={isLiked ? 'text-red-500' : 'transition hover:text-zinc-950'}
+            onClick={() => onToggleLike(comment)}
+            aria-pressed={isLiked}
+          >
+            {likesCount > 0 ? `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}` : 'Like'}
+          </button>
+
           {comment.ownedByCurrentVisitor ? (
             <>
               <button type="button" onClick={() => onEdit(comment)}>
@@ -126,6 +141,19 @@ function CommentRow({ comment, onEdit, onDelete }) {
           ) : null}
         </div>
       </div>
+
+      <button
+        type="button"
+        className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-400 transition active:scale-90"
+        onClick={() => onToggleLike(comment)}
+        aria-label={isLiked ? 'Unlike comment' : 'Like comment'}
+        aria-pressed={isLiked}
+      >
+        <HeartIcon
+          className="h-[18px] w-[18px] drop-shadow-[0_1px_0_rgba(255,255,255,0.8)]"
+          isLiked={isLiked}
+        />
+      </button>
     </div>
   )
 }
@@ -143,17 +171,27 @@ function CommentsSheet({
   onSubmit,
   onEdit,
   onDelete,
+  onToggleCommentLike,
 }) {
   const [draft, setDraft] = useState('')
   const [editingComment, setEditingComment] = useState(null)
+  const [optimisticCommentLikes, setOptimisticCommentLikes] = useState({})
   const inputRef = useRef(null)
   
   const trimmedDraft = draft.trim()
   const likesSummary = useMemo(() => formatLikesSummary(post), [post])
+  const visibleComments = useMemo(
+    () => comments.map((comment) => ({
+      ...comment,
+      ...optimisticCommentLikes[comment.id],
+    })),
+    [comments, optimisticCommentLikes],
+  )
 
   useEffect(() => {
     setDraft('')
     setEditingComment(null)
+    setOptimisticCommentLikes({})
   }, [post?.id])
 
 
@@ -170,6 +208,34 @@ function CommentsSheet({
   function cancelEdit() {
     setEditingComment(null)
     setDraft('')
+  }
+
+  async function handleToggleCommentLike(comment) {
+    const currentIsLiked = Boolean(comment.likedByCurrentVisitor)
+    const currentLikesCount = Number(comment.likesCount) || 0
+    const nextIsLiked = !currentIsLiked
+    const nextLikesCount = Math.max(0, currentLikesCount + (nextIsLiked ? 1 : -1))
+
+    setOptimisticCommentLikes((current) => ({
+      ...current,
+      [comment.id]: {
+        likedByCurrentVisitor: nextIsLiked,
+        likesCount: nextLikesCount,
+      },
+    }))
+
+    try {
+      await onToggleCommentLike?.(comment.id, nextIsLiked)
+    } catch (error) {
+      console.error('Failed to like comment:', error)
+      setOptimisticCommentLikes((current) => ({
+        ...current,
+        [comment.id]: {
+          likedByCurrentVisitor: currentIsLiked,
+          likesCount: currentLikesCount,
+        },
+      }))
+    }
   }
 
   async function handleSubmit(event) {
@@ -229,7 +295,7 @@ function CommentsSheet({
             </div>
           ) : null}
 
-          {!isLoading && comments.length === 0 ? (
+          {!isLoading && visibleComments.length === 0 ? (
             <div className="flex h-52 flex-col items-center justify-center px-8 text-center">
               <p className="text-base font-semibold text-zinc-950">
                 No comments yet
@@ -241,12 +307,13 @@ function CommentsSheet({
           ) : null}
 
           {!isLoading
-            ? comments.map((comment) => (
+            ? visibleComments.map((comment) => (
                 <CommentRow
                   key={comment.id}
                   comment={comment}
                   onEdit={beginEdit}
                   onDelete={onDelete}
+                  onToggleLike={handleToggleCommentLike}
                 />
               ))
             : null}
