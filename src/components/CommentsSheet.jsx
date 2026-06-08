@@ -119,15 +119,12 @@ function CommentRow({ comment, onEdit, onDelete, onToggleLike }) {
 
         <div className="mt-1 flex items-center gap-4 text-xs font-medium text-zinc-500">
           <span>{formatRelativeTime(comment.createdAt)}</span>
-
-          <button
-            type="button"
-            className={isLiked ? 'text-red-500' : 'transition hover:text-zinc-950'}
-            onClick={() => onToggleLike(comment)}
-            aria-pressed={isLiked}
-          >
-            {likesCount > 0 ? `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}` : 'Like'}
-          </button>
+        
+        {likesCount > 0 ? (
+          <span className="font-semibold text-zinc-700">
+            {comment.likesSummary || `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`}
+          </span>
+        ) : null}
 
           {comment.ownedByCurrentVisitor ? (
             <>
