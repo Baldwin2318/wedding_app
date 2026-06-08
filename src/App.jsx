@@ -20,6 +20,7 @@ import {
   deletePhotoComment,
   fetchPhotoComments,
   fetchPhotoLikes,
+  fetchPhotoCommentLikes,
   updatePhotoComment,
   togglePhotoCommentLike,
 } from './lib/photoComments'
@@ -751,7 +752,11 @@ function App() {
   async function handleTogglePhotoCommentLike(photoId, commentId, shouldLike) {
     return togglePhotoCommentLike(photoId, commentId, shouldLike)
   }
-    
+   
+  async function handleLoadPhotoCommentLikes(photoId, commentId) {
+    return fetchPhotoCommentLikes(photoId, commentId)
+  }
+  
   const screens = {
     introduction: (
       <Introduction
@@ -840,6 +845,7 @@ function App() {
         onAccessCodeInputChange={setAccessCodeInput}
         onDeletePhoto={handleDeletePhoto}
         onTogglePhotoCommentLike={handleTogglePhotoCommentLike}
+        onLoadPhotoCommentLikes={handleLoadPhotoCommentLikes}
       />
     ),
   }
