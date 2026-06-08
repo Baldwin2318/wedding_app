@@ -183,6 +183,20 @@ async function ensureDatabaseSchema() {
   `)
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS photo_capture_comment_likes (
+      comment_id BIGINT NOT NULL REFERENCES photo_capture_comments(id) ON DELETE CASCADE,
+      visitor_identity TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (comment_id, visitor_identity)
+    );
+  `)
+  
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS photo_capture_comment_likes_comment_created_idx
+    ON photo_capture_comment_likes (comment_id, created_at DESC);
+  `)
+  
+  await pool.query(`
     ALTER TABLE photo_captures
     ADD COLUMN IF NOT EXISTS comments_count INTEGER NOT NULL DEFAULT 0;
   `)
@@ -1066,6 +1080,10 @@ function isAnonymousAccessCodeUuid(accessCodeUuid) {
 }
 
 function mapCommentRow(row, currentVisitorIdentity) {
+  const likesCount = Number(row.likes_count) || 0
+  const likerNames = Array.isArray(row.liker_names) ? row.liker_names : []
+  const firstLikerName = likerNames[0] || ''
+
   return {
     id: String(row.id),
     photoId: String(row.photo_capture_id),
@@ -1077,6 +1095,15 @@ function mapCommentRow(row, currentVisitorIdentity) {
     ownedByCurrentVisitor: row.visitor_identity === currentVisitorIdentity,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    likesCount,
+    likedByCurrentVisitor: Boolean(row.liked_by_current_visitor),
+    likerNames,
+    likesSummary:
+      likesCount === 0
+        ? ''
+        : firstLikerName
+          ? `Liked by ${firstLikerName}${likesCount > 1 ? ` and ${likesCount - 1} ${likesCount - 1 === 1 ? 'other' : 'others'}` : ''}`
+          : `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`,
   }
 }
 
@@ -1097,10 +1124,33 @@ app.get('/api/photos/:id/comments', async (request, response) => {
           photo_capture_comments.updated_at,
           profiles.name AS author_name,
           profiles.url_profile_pic,
-          COALESCE(profiles.verified, FALSE) AS author_verified
+          COALESCE(profiles.verified, FALSE) AS author_verified,
+          COALESCE(comment_like_stats.likes_count, 0) AS likes_count,
+          COALESCE(comment_like_stats.liker_names, ARRAY[]::TEXT[]) AS liker_names,
+          comment_current_like.comment_id IS NOT NULL AS liked_by_current_visitor
         FROM photo_capture_comments
         LEFT JOIN profiles
           ON profiles.uuid = photo_capture_comments.profile_uuid
+        LEFT JOIN photo_capture_comment_likes AS comment_current_like
+          ON comment_current_like.comment_id = photo_capture_comments.id
+          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::INT AS likes_count,
+            ARRAY_AGG(named_comment_likes.name ORDER BY named_comment_likes.created_at DESC)
+              FILTER (WHERE named_comment_likes.name IS NOT NULL) AS liker_names
+          FROM (
+            SELECT profiles.name, photo_capture_comment_likes.created_at
+            FROM photo_capture_comment_likes
+            LEFT JOIN profiles
+              ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+              AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+            WHERE photo_capture_comment_likes.comment_id = photo_capture_comments.id
+            ORDER BY photo_capture_comment_likes.created_at DESC
+            LIMIT 2
+          ) AS named_comment_likes
+        ) AS comment_like_stats
+          ON TRUE
         WHERE photo_capture_comments.photo_capture_id = $1
         ORDER BY photo_capture_comments.created_at ASC, photo_capture_comments.id ASC
       `,
@@ -1288,10 +1338,33 @@ app.post('/api/photos/:id/comments', async (request, response) => {
           photo_capture_comments.updated_at,
           profiles.name AS author_name,
           profiles.url_profile_pic,
-          COALESCE(profiles.verified, FALSE) AS author_verified
+          COALESCE(profiles.verified, FALSE) AS author_verified,
+          COALESCE(comment_like_stats.likes_count, 0) AS likes_count,
+          COALESCE(comment_like_stats.liker_names, ARRAY[]::TEXT[]) AS liker_names,
+          comment_current_like.comment_id IS NOT NULL AS liked_by_current_visitor
         FROM photo_capture_comments
         LEFT JOIN profiles
           ON profiles.uuid = photo_capture_comments.profile_uuid
+        LEFT JOIN photo_capture_comment_likes AS comment_current_like
+          ON comment_current_like.comment_id = photo_capture_comments.id
+          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::INT AS likes_count,
+            ARRAY_AGG(named_comment_likes.name ORDER BY named_comment_likes.created_at DESC)
+              FILTER (WHERE named_comment_likes.name IS NOT NULL) AS liker_names
+          FROM (
+            SELECT profiles.name, photo_capture_comment_likes.created_at
+            FROM photo_capture_comment_likes
+            LEFT JOIN profiles
+              ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+              AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+            WHERE photo_capture_comment_likes.comment_id = photo_capture_comments.id
+            ORDER BY photo_capture_comment_likes.created_at DESC
+            LIMIT 2
+          ) AS named_comment_likes
+        ) AS comment_like_stats
+          ON TRUE
         WHERE photo_capture_comments.id = $1
         LIMIT 1
       `,
@@ -1372,10 +1445,33 @@ app.patch('/api/photos/:photoId/comments/:commentId', async (request, response) 
           photo_capture_comments.updated_at,
           profiles.name AS author_name,
           profiles.url_profile_pic,
-          COALESCE(profiles.verified, FALSE) AS author_verified
-        FROM photo_capture_comments
+          COALESCE(profiles.verified, FALSE) AS author_verified,
+          COALESCE(comment_like_stats.likes_count, 0) AS likes_count,
+          COALESCE(comment_like_stats.liker_names, ARRAY[]::TEXT[]) AS liker_names,
+          comment_current_like.comment_id IS NOT NULL AS liked_by_current_visitor
+                  FROM photo_capture_comments
         LEFT JOIN profiles
           ON profiles.uuid = photo_capture_comments.profile_uuid
+        LEFT JOIN photo_capture_comment_likes AS comment_current_like
+          ON comment_current_like.comment_id = photo_capture_comments.id
+          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::INT AS likes_count,
+            ARRAY_AGG(named_comment_likes.name ORDER BY named_comment_likes.created_at DESC)
+              FILTER (WHERE named_comment_likes.name IS NOT NULL) AS liker_names
+          FROM (
+            SELECT profiles.name, photo_capture_comment_likes.created_at
+            FROM photo_capture_comment_likes
+            LEFT JOIN profiles
+              ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+              AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+            WHERE photo_capture_comment_likes.comment_id = photo_capture_comments.id
+            ORDER BY photo_capture_comment_likes.created_at DESC
+            LIMIT 2
+          ) AS named_comment_likes
+        ) AS comment_like_stats
+          ON TRUE
         WHERE photo_capture_comments.id = $1
         LIMIT 1
       `,
@@ -1664,6 +1760,166 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
           ? error.message
           : 'Failed to upload profile picture and create profile.',
     })
+  }
+})
+
+app.post('/api/photos/:photoId/comments/:commentId/like', async (request, response) => {
+  const { photoId, commentId } = request.params
+  const visitorIdentity = getRequestVisitorIdentity(request)
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const commentResult = await client.query(
+      `
+        SELECT id
+        FROM photo_capture_comments
+        WHERE id = $1
+          AND photo_capture_id = $2
+        FOR UPDATE
+      `,
+      [commentId, photoId],
+    )
+
+    if (commentResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Comment not found.',
+      })
+      return
+    }
+
+    await client.query(
+      `
+        INSERT INTO photo_capture_comment_likes (comment_id, visitor_identity)
+        VALUES ($1, $2)
+        ON CONFLICT (comment_id, visitor_identity) DO NOTHING
+      `,
+      [commentId, visitorIdentity],
+    )
+
+    const likeResult = await client.query(
+      `
+        SELECT
+          COUNT(*)::INT AS likes_count,
+          ARRAY_AGG(named_likes.name ORDER BY named_likes.created_at DESC)
+            FILTER (WHERE named_likes.name IS NOT NULL) AS liker_names
+        FROM (
+          SELECT profiles.name, photo_capture_comment_likes.created_at
+          FROM photo_capture_comment_likes
+          LEFT JOIN profiles
+            ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+            AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+          WHERE photo_capture_comment_likes.comment_id = $1
+          ORDER BY photo_capture_comment_likes.created_at DESC
+          LIMIT 2
+        ) AS named_likes
+      `,
+      [commentId],
+    )
+
+    await client.query('COMMIT')
+
+    response.status(200).json({
+      ok: true,
+      id: String(commentId),
+      photoId: String(photoId),
+      likesCount: likeResult.rows[0].likes_count,
+      likerNames: Array.isArray(likeResult.rows[0].liker_names)
+        ? likeResult.rows[0].liker_names
+        : [],
+      likedByCurrentVisitor: true,
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to like comment.',
+    })
+  } finally {
+    client.release()
+  }
+})
+
+app.delete('/api/photos/:photoId/comments/:commentId/like', async (request, response) => {
+  const { photoId, commentId } = request.params
+  const visitorIdentity = getRequestVisitorIdentity(request)
+  const client = await pool.connect()
+
+  try {
+    await client.query('BEGIN')
+
+    const commentResult = await client.query(
+      `
+        SELECT id
+        FROM photo_capture_comments
+        WHERE id = $1
+          AND photo_capture_id = $2
+        FOR UPDATE
+      `,
+      [commentId, photoId],
+    )
+
+    if (commentResult.rowCount === 0) {
+      await client.query('ROLLBACK')
+      response.status(404).json({
+        ok: false,
+        error: 'Comment not found.',
+      })
+      return
+    }
+
+    await client.query(
+      `
+        DELETE FROM photo_capture_comment_likes
+        WHERE comment_id = $1
+          AND visitor_identity = $2
+      `,
+      [commentId, visitorIdentity],
+    )
+
+    const likeResult = await client.query(
+      `
+        SELECT
+          COUNT(*)::INT AS likes_count,
+          ARRAY_AGG(named_likes.name ORDER BY named_likes.created_at DESC)
+            FILTER (WHERE named_likes.name IS NOT NULL) AS liker_names
+        FROM (
+          SELECT profiles.name, photo_capture_comment_likes.created_at
+          FROM photo_capture_comment_likes
+          LEFT JOIN profiles
+            ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+            AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+          WHERE photo_capture_comment_likes.comment_id = $1
+          ORDER BY photo_capture_comment_likes.created_at DESC
+          LIMIT 2
+        ) AS named_likes
+      `,
+      [commentId],
+    )
+
+    await client.query('COMMIT')
+
+    response.status(200).json({
+      ok: true,
+      id: String(commentId),
+      photoId: String(photoId),
+      likesCount: likeResult.rows[0].likes_count,
+      likerNames: Array.isArray(likeResult.rows[0].liker_names)
+        ? likeResult.rows[0].liker_names
+        : [],
+      likedByCurrentVisitor: false,
+    })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to unlike comment.',
+    })
+  } finally {
+    client.release()
   }
 })
 
