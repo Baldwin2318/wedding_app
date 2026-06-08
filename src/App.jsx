@@ -749,23 +749,7 @@ function App() {
   }
 
   async function handleTogglePhotoCommentLike(photoId, commentId, shouldLike) {
-    const result = await togglePhotoCommentLike(photoId, commentId, shouldLike)
-  
-    setCommentsByPhotoId((current) => ({
-      ...current,
-      [String(photoId)]: (current[String(photoId)] || []).map((comment) =>
-        comment.id === result.id
-          ? {
-              ...comment,
-              likesCount: result.likesCount,
-              likedByCurrentVisitor: result.likedByCurrentVisitor,
-              likerNames: result.likerNames,
-            }
-          : comment,
-      ),
-    }))
-  
-    return result
+    return togglePhotoCommentLike(photoId, commentId, shouldLike)
   }
     
   const screens = {
