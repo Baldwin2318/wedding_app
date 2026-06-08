@@ -799,6 +799,41 @@ function NewsFeed({
   
     return result
   }
+
+  async function handleToggleCommentLike(commentId, shouldLike) {
+    if (!commentSheetPost) {
+      return null
+    }
+  
+    const result = await onTogglePhotoCommentLike?.(
+      commentSheetPost.id,
+      commentId,
+      shouldLike,
+    )
+  
+    if (!result) {
+      return null
+    }
+  
+    setCommentsByPhotoId((current) => ({
+      ...current,
+      [commentSheetPost.id]: (current[commentSheetPost.id] || []).map((comment) =>
+        comment.id === result.id
+          ? {
+              ...comment,
+              likesCount: result.likesCount,
+              likedByCurrentVisitor: result.likedByCurrentVisitor,
+              likerNames: result.likerNames,
+              likesSummary:
+                result.likesSummary ||
+                `${result.likesCount} ${result.likesCount === 1 ? 'like' : 'likes'}`,
+            }
+          : comment,
+      ),
+    }))
+  
+    return result
+  }
   
   useEffect(() => {
     if (!isLoadingMorePhotos) {
