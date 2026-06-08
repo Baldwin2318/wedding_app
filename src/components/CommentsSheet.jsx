@@ -96,7 +96,7 @@ function LikerPreviewAvatars({ post }) {
   )
 }
 
-function CommentRow({ comment, onEdit, onDelete, onToggleLike }) {
+function CommentRow({ comment, onEdit, onDelete, onToggleLike, onOpenCommentLikes }) {
   const likesCount = Number(comment.likesCount) || 0
   const isLiked = Boolean(comment.likedByCurrentVisitor)
 
@@ -120,11 +120,15 @@ function CommentRow({ comment, onEdit, onDelete, onToggleLike }) {
         <div className="mt-1 flex items-center gap-4 text-xs font-medium text-zinc-500">
           <span>{formatRelativeTime(comment.createdAt)}</span>
         
-        {likesCount > 0 ? (
-          <span className="font-semibold text-zinc-700">
-            {comment.likesSummary || `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`}
-          </span>
-        ) : null}
+          {likesCount > 0 ? (
+            <button
+              type="button"
+              className="font-semibold text-zinc-700 transition hover:text-zinc-950"
+              onClick={() => onOpenCommentLikes?.(comment)}
+            >
+              {comment.likesSummary || `${likesCount} ${likesCount === 1 ? 'like' : 'likes'}`}
+            </button>
+          ) : null}
 
           {comment.ownedByCurrentVisitor ? (
             <>
@@ -169,6 +173,7 @@ function CommentsSheet({
   onEdit,
   onDelete,
   onToggleCommentLike,
+  onOpenCommentLikes,
 }) {
   const [draft, setDraft] = useState('')
   const [editingComment, setEditingComment] = useState(null)
@@ -311,6 +316,7 @@ function CommentsSheet({
                   onEdit={beginEdit}
                   onDelete={onDelete}
                   onToggleLike={handleToggleCommentLike}
+                  onOpenCommentLikes={onOpenCommentLikes}
                 />
               ))
             : null}
