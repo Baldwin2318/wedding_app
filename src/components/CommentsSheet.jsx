@@ -96,7 +96,7 @@ function LikerPreviewAvatars({ post }) {
   )
 }
 
-function CommentRow({ comment, onEdit, onDelete, onToggleLike, onOpenCommentLikes }) {
+function CommentRow({ comment, onEdit, onDelete, onToggleLike, onOpenCommentLikes, canComment }) {
   const likesCount = Number(comment.likesCount) || 0
   const isLiked = Boolean(comment.likedByCurrentVisitor)
 
