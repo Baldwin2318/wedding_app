@@ -1503,7 +1503,19 @@ function NewsFeed({
         onClose={closeLikesSheet}
         onSelectProfile={openProfileFromLikes}
       />
-      
+
+      <LikesSheet
+        post={commentLikesSheet}
+        likes={commentLikesSheet ? commentLikesById[commentLikesSheet.id] || [] : []}
+        isLoading={isLoadingCommentLikes}
+        error={commentLikesError}
+        onClose={() => {
+          setCommentLikesSheet(null)
+          setCommentLikesError('')
+        }}
+        onSelectProfile={openProfileFromLikes}
+      />
+            
       <ProfileSettings
         isOpen={isProfileSettingsOpen}
         profile={currentProfile}
