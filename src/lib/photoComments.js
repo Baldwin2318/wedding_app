@@ -83,3 +83,25 @@ export async function deletePhotoComment(photoId, commentId) {
     commentsCount: payload?.commentsCount ?? null,
   }
 }
+
+export async function togglePhotoCommentLike(photoId, commentId, shouldLike) {
+  const response = await fetch(`/api/photos/${photoId}/comments/${commentId}/like`, {
+    method: shouldLike ? 'POST' : 'DELETE',
+    headers: {
+      ...getAccessCodeHeaders(),
+    },
+  })
+
+  const payload = await readJsonResponse(
+    response,
+    shouldLike ? 'Failed to like comment.' : 'Failed to unlike comment.',
+  )
+
+  return {
+    id: String(payload?.id || commentId),
+    photoId: String(payload?.photoId || photoId),
+    likesCount: payload?.likesCount ?? 0,
+    likedByCurrentVisitor: Boolean(payload?.likedByCurrentVisitor),
+    likerNames: Array.isArray(payload?.likerNames) ? payload.likerNames : [],
+  }
+}
