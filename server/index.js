@@ -1763,6 +1763,66 @@ app.post('/api/profiles', upload.single('file'), async (request, response) => {
   }
 })
 
+app.get('/api/photos/:photoId/comments/:commentId/likes', async (request, response) => {
+  const { photoId, commentId } = request.params
+
+  try {
+    const commentResult = await pool.query(
+      `
+        SELECT id
+        FROM photo_capture_comments
+        WHERE id = $1
+          AND photo_capture_id = $2
+        LIMIT 1
+      `,
+      [commentId, photoId],
+    )
+
+    if (commentResult.rowCount === 0) {
+      response.status(404).json({
+        ok: false,
+        error: 'Comment not found.',
+      })
+      return
+    }
+
+    const result = await pool.query(
+      `
+        SELECT
+          profiles.uuid,
+          profiles.name,
+          profiles.url_profile_pic,
+          COALESCE(profiles.verified, FALSE) AS verified,
+          photo_capture_comment_likes.created_at
+        FROM photo_capture_comment_likes
+        JOIN profiles
+          ON photo_capture_comment_likes.visitor_identity LIKE 'code:%'
+          AND profiles.uuid = SUBSTRING(photo_capture_comment_likes.visitor_identity FROM 6)
+        WHERE photo_capture_comment_likes.comment_id = $1
+          AND TRIM(profiles.name) <> ''
+        ORDER BY photo_capture_comment_likes.created_at DESC, profiles.name ASC
+      `,
+      [commentId],
+    )
+
+    response.status(200).json({
+      ok: true,
+      likes: result.rows.map((row) => ({
+        uuid: row.uuid || '',
+        name: row.name || 'Guest',
+        profileImageUrl: row.url_profile_pic || '',
+        verified: Boolean(row.verified),
+        createdAt: row.created_at,
+      })),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to load comment likes.',
+    })
+  }
+})
+
 app.post('/api/photos/:photoId/comments/:commentId/like', async (request, response) => {
   const { photoId, commentId } = request.params
   const visitorIdentity = getRequestVisitorIdentity(request)
