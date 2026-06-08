@@ -170,6 +170,7 @@ function NewsFeed({
   onAccessCodeInputChange,
   onDeletePhoto,
   onTogglePhotoCommentLike,
+  onLoadPhotoCommentLikes,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -214,6 +215,10 @@ function NewsFeed({
   const [isNavOpen, setIsNavOpen] = useState(false)
   const [isMembersOpen, setIsMembersOpen] = useState(false)
   const [members, setMembers] = useState([])
+  const [commentLikesSheet, setCommentLikesSheet] = useState(null)
+  const [commentLikesById, setCommentLikesById] = useState({})
+  const [isLoadingCommentLikes, setIsLoadingCommentLikes] = useState(false)
+  const [commentLikesError, setCommentLikesError] = useState('')
 
   useEffect(() => {
     if (!hasVerifiedAccess) {
@@ -834,6 +839,42 @@ function NewsFeed({
   
     return result
   }
+
+  async function openCommentLikesSheet(comment) {
+    if (!commentSheetPost?.id || !comment?.id || Number(comment.likesCount) <= 0) {
+      return
+    }
+  
+    const sheetKey = `${commentSheetPost.id}:${comment.id}`
+  
+    setCommentLikesSheet({
+      id: sheetKey,
+      photoId: commentSheetPost.id,
+      commentId: comment.id,
+      likesCount: comment.likesCount,
+    })
+    setCommentLikesError('')
+  
+    if (commentLikesById[sheetKey]) {
+      return
+    }
+  
+    try {
+      setIsLoadingCommentLikes(true)
+      const likes = await onLoadPhotoCommentLikes?.(commentSheetPost.id, comment.id)
+  
+      setCommentLikesById((current) => ({
+        ...current,
+        [sheetKey]: likes || [],
+      }))
+    } catch (error) {
+      setCommentLikesError(
+        error instanceof Error ? error.message : 'Failed to load comment likes.',
+      )
+    } finally {
+      setIsLoadingCommentLikes(false)
+    }
+  }
   
   useEffect(() => {
     if (!isLoadingMorePhotos) {
@@ -1451,6 +1492,7 @@ function NewsFeed({
         onEdit={handleEditComment}
         onDelete={handleDeleteComment}
         onToggleCommentLike={handleToggleCommentLike}
+        onOpenCommentLikes={openCommentLikesSheet}
       />
 
       <LikesSheet
