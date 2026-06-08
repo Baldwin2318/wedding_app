@@ -999,7 +999,12 @@ function NewsFeed({
                     className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100"
                     onClick={openCurrentUserProfile}
                     >
-                    <AccountIcon className="h-5 w-5" />
+                      
+                    <ProfileAvatar
+                      src={currentProfile?.urlProfilePic || currentProfile?.profileImage || ''}
+                      name={currentProfile?.name || 'Guest'}
+                      className="h-12 w-12 shadow-none ring-0"
+                    />
                     My account
                     </button>
 
@@ -1342,21 +1347,6 @@ function NewsFeed({
             </div>
           </div>
         </div>
-      ) : null}
-
-      {hasVerifiedAccess ? (
-        <button
-          type="button"
-          className="fixed bottom-6 right-5 z-30 inline-flex h-15 w-15 items-center justify-center rounded-full bg-white/88 p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5 backdrop-blur-xl transition active:scale-95"
-          onClick={openProfileSettings}
-          aria-label="Open profile settings"
-        >
-          <ProfileAvatar
-            src={currentProfile?.urlProfilePic || currentProfile?.profileImage || ''}
-            name={currentProfile?.name || 'Guest'}
-            className="h-12 w-12 shadow-none ring-0"
-          />
-        </button>
       ) : null}
 
       {isMembersOpen ? (
