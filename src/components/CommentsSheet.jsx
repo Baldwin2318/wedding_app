@@ -149,6 +149,7 @@ function CommentRow({ comment, onEdit, onDelete, onToggleLike, onOpenCommentLike
         onClick={() => onToggleLike(comment)}
         aria-label={isLiked ? 'Unlike comment' : 'Like comment'}
         aria-pressed={isLiked}
+        disabled={!canComment}
       >
         <HeartIcon
           className="h-[18px] w-[18px] drop-shadow-[0_1px_0_rgba(255,255,255,0.8)]"
@@ -174,6 +175,7 @@ function CommentsSheet({
   onDelete,
   onToggleCommentLike,
   onOpenCommentLikes,
+  isVerified,
 }) {
   const [draft, setDraft] = useState('')
   const [editingComment, setEditingComment] = useState(null)
@@ -317,6 +319,7 @@ function CommentsSheet({
                   onDelete={onDelete}
                   onToggleLike={handleToggleCommentLike}
                   onOpenCommentLikes={onOpenCommentLikes}
+                  canComment={canComment}
                 />
               ))
             : null}
