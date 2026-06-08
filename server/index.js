@@ -1133,7 +1133,7 @@ app.get('/api/photos/:id/comments', async (request, response) => {
           ON profiles.uuid = photo_capture_comments.profile_uuid
         LEFT JOIN photo_capture_comment_likes AS comment_current_like
           ON comment_current_like.comment_id = photo_capture_comments.id
-          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+          AND comment_current_like.visitor_identity = $2
         LEFT JOIN LATERAL (
           SELECT
             COUNT(*)::INT AS likes_count,
@@ -1154,7 +1154,7 @@ app.get('/api/photos/:id/comments', async (request, response) => {
         WHERE photo_capture_comments.photo_capture_id = $1
         ORDER BY photo_capture_comments.created_at ASC, photo_capture_comments.id ASC
       `,
-      [id],
+      [id, visitorIdentity],
     )
 
     response.status(200).json({
@@ -1347,7 +1347,7 @@ app.post('/api/photos/:id/comments', async (request, response) => {
           ON profiles.uuid = photo_capture_comments.profile_uuid
         LEFT JOIN photo_capture_comment_likes AS comment_current_like
           ON comment_current_like.comment_id = photo_capture_comments.id
-          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+          AND comment_current_like.visitor_identity = $2
         LEFT JOIN LATERAL (
           SELECT
             COUNT(*)::INT AS likes_count,
@@ -1368,7 +1368,7 @@ app.post('/api/photos/:id/comments', async (request, response) => {
         WHERE photo_capture_comments.id = $1
         LIMIT 1
       `,
-      [insertResult.rows[0].id],
+      [insertResult.rows[0].id, visitorIdentity],
     )
 
     await client.query('COMMIT')
@@ -1454,7 +1454,7 @@ app.patch('/api/photos/:photoId/comments/:commentId', async (request, response) 
           ON profiles.uuid = photo_capture_comments.profile_uuid
         LEFT JOIN photo_capture_comment_likes AS comment_current_like
           ON comment_current_like.comment_id = photo_capture_comments.id
-          AND comment_current_like.visitor_identity = $CURRENT_VISITOR_PARAM
+          AND comment_current_like.visitor_identity = $2
         LEFT JOIN LATERAL (
           SELECT
             COUNT(*)::INT AS likes_count,
@@ -1475,7 +1475,7 @@ app.patch('/api/photos/:photoId/comments/:commentId', async (request, response) 
         WHERE photo_capture_comments.id = $1
         LIMIT 1
       `,
-      [commentId],
+      [commentId, visitorIdentity],
     )
 
     response.status(200).json({
