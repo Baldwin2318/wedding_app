@@ -24,6 +24,7 @@ import {
   updatePhotoComment,
   togglePhotoCommentLike,
 } from './lib/photoComments'
+import WendGame from './components/WendGame'
 
 let hasTrackedAppOpen = false
 const PHOTO_PAGE_SIZE = 12
@@ -846,6 +847,13 @@ function App() {
         onDeletePhoto={handleDeletePhoto}
         onTogglePhotoCommentLike={handleTogglePhotoCommentLike}
         onLoadPhotoCommentLikes={handleLoadPhotoCommentLikes}
+        onOpenGame={() => setCurrentScreen('game')}
+      />
+    ),
+    game: (
+      <WendGame
+        currentProfile={currentProfile}
+        onBack={() => setCurrentScreen('feed')}
       />
     ),
   }
