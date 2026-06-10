@@ -171,6 +171,7 @@ function NewsFeed({
   onDeletePhoto,
   onTogglePhotoCommentLike,
   onLoadPhotoCommentLikes,
+  onOpenGame,
 }) {
   const uploadCaptionFieldRef = useRef(null)
   const [likedPosts, setLikedPosts] = useState({})
@@ -1128,6 +1129,20 @@ function NewsFeed({
                     <MembersIcon className="h-5 w-5" />
                     See members
                     </button>
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100"
+                    onClick={() => {
+                      setIsNavOpen(false)
+                      onOpenGame?.()
+                    }}
+                  >
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950 text-[10px] font-black text-white">
+                      W
+                    </span>
+                    Wend game
+                  </button>
 
                     <button
                     type="button"
