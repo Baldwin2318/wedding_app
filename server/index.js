@@ -62,6 +62,31 @@ const upload = multer({
 })
 const photoFeedClients = new Set()
 
+const WEND_GAME_WORD_SETS = [
+  ['sun', 'love', 'bride'],
+  ['joy', 'ring', 'dance'],
+  ['hug', 'vows', 'heart'],
+  ['kiss', 'cake', 'party'],
+  ['yes', 'rosy', 'smile'],
+  // Continue until exactly 100 sets.
+]
+
+function getUtcGameDate(now = new Date()) {
+  return now.toISOString().slice(0, 10)
+}
+
+function getDailyWendGameSetIndex(gameDate) {
+  const start = Date.UTC(2026, 0, 1)
+  const current = Date.parse(`${gameDate}T00:00:00.000Z`)
+  const dayIndex = Math.floor((current - start) / 86_400_000)
+  return ((dayIndex % WEND_GAME_WORD_SETS.length) + WEND_GAME_WORD_SETS.length) % WEND_GAME_WORD_SETS.length
+}
+
+function scoreWendGame(elapsedMs) {
+  const seconds = Math.max(Math.ceil(Number(elapsedMs) / 1000), 1)
+  return Math.max(1000 - seconds * 10, 100)
+}
+
 async function ensureDatabaseSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS app_visitors (
@@ -252,6 +277,24 @@ async function ensureDatabaseSchema() {
       AND TRIM(codes.uuid) <> ''
       AND codes.code IS NOT NULL
       AND TRIM(codes.code) <> '';
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wend_game_scores (
+      id BIGSERIAL PRIMARY KEY,
+      profile_uuid TEXT NOT NULL REFERENCES profiles(uuid) ON DELETE CASCADE,
+      game_date DATE NOT NULL,
+      set_index INTEGER NOT NULL,
+      score INTEGER NOT NULL,
+      elapsed_ms INTEGER NOT NULL,
+      completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (profile_uuid, game_date)
+    );
+  `)
+  
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS wend_game_scores_date_score_idx
+    ON wend_game_scores (game_date DESC, score DESC, elapsed_ms ASC);
   `)
 }
 
@@ -1980,6 +2023,165 @@ app.delete('/api/photos/:photoId/comments/:commentId/like', async (request, resp
     })
   } finally {
     client.release()
+  }
+})
+
+app.get('/api/wend-game/today', async (request, response) => {
+  const accessCodeUuid =
+    typeof request.headers['x-access-code-uuid'] === 'string'
+      ? request.headers['x-access-code-uuid'].trim()
+      : ''
+
+  if (!accessCodeUuid) {
+    response.status(401).json({ ok: false, error: 'Access code is required.' })
+    return
+  }
+
+  try {
+    if (!(await isValidAccessCodeUuid(accessCodeUuid))) {
+      response.status(403).json({ ok: false, error: 'Invalid access code session.' })
+      return
+    }
+
+    const gameDate = getUtcGameDate()
+    const setIndex = getDailyWendGameSetIndex(gameDate)
+    const words = WEND_GAME_WORD_SETS[setIndex]
+
+    const playedResult = await pool.query(
+      `
+        SELECT score, elapsed_ms, completed_at
+        FROM wend_game_scores
+        WHERE profile_uuid = $1 AND game_date = $2
+        LIMIT 1
+      `,
+      [accessCodeUuid, gameDate],
+    )
+
+    const leaderboardResult = await pool.query(
+      `
+        SELECT
+          wend_game_scores.score,
+          wend_game_scores.elapsed_ms,
+          wend_game_scores.completed_at,
+          profiles.uuid,
+          profiles.name,
+          profiles.url_profile_pic,
+          profiles.verified
+        FROM wend_game_scores
+        JOIN profiles ON profiles.uuid = wend_game_scores.profile_uuid
+        WHERE wend_game_scores.game_date = $1
+        ORDER BY wend_game_scores.score DESC, wend_game_scores.elapsed_ms ASC
+        LIMIT 10
+      `,
+      [gameDate],
+    )
+
+    response.status(200).json({
+      ok: true,
+      gameDate,
+      setIndex,
+      words: playedResult.rowCount > 0 ? [] : words,
+      alreadyPlayed: playedResult.rowCount > 0,
+      previousScore: playedResult.rows[0]
+        ? {
+            score: playedResult.rows[0].score,
+            elapsedMs: playedResult.rows[0].elapsed_ms,
+            completedAt: playedResult.rows[0].completed_at,
+          }
+        : null,
+      leaderboard: leaderboardResult.rows.map((row) => ({
+        score: row.score,
+        elapsedMs: row.elapsed_ms,
+        completedAt: row.completed_at,
+        profile: {
+          uuid: row.uuid,
+          name: row.name,
+          urlProfilePic: row.url_profile_pic,
+          verified: Boolean(row.verified),
+        },
+      })),
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to load Wend game.',
+    })
+  }
+})
+
+app.post('/api/wend-game/complete', async (request, response) => {
+  const accessCodeUuid =
+    typeof request.headers['x-access-code-uuid'] === 'string'
+      ? request.headers['x-access-code-uuid'].trim()
+      : ''
+
+  const elapsedMs = Math.max(Number(request.body?.elapsedMs) || 0, 0)
+  const submittedWords = Array.isArray(request.body?.words)
+    ? request.body.words.map((word) => String(word).trim().toLowerCase())
+    : []
+
+  if (!accessCodeUuid) {
+    response.status(401).json({ ok: false, error: 'Access code is required.' })
+    return
+  }
+
+  try {
+    if (!(await isValidAccessCodeUuid(accessCodeUuid))) {
+      response.status(403).json({ ok: false, error: 'Invalid access code session.' })
+      return
+    }
+
+    const gameDate = getUtcGameDate()
+    const setIndex = getDailyWendGameSetIndex(gameDate)
+    const expectedWords = WEND_GAME_WORD_SETS[setIndex]
+
+    const isCorrect =
+      submittedWords.length === expectedWords.length &&
+      expectedWords.every((word, index) => submittedWords[index] === word)
+
+    if (!isCorrect) {
+      response.status(400).json({ ok: false, error: 'Invalid Wend game answer.' })
+      return
+    }
+
+    const score = scoreWendGame(elapsedMs)
+
+    const insertResult = await pool.query(
+      `
+        INSERT INTO wend_game_scores (
+          profile_uuid,
+          game_date,
+          set_index,
+          score,
+          elapsed_ms
+        )
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (profile_uuid, game_date)
+        DO NOTHING
+        RETURNING score, elapsed_ms, completed_at
+      `,
+      [accessCodeUuid, gameDate, setIndex, score, elapsedMs],
+    )
+
+    if (insertResult.rowCount === 0) {
+      response.status(409).json({
+        ok: false,
+        error: 'You already played today. Come back tomorrow.',
+      })
+      return
+    }
+
+    response.status(201).json({
+      ok: true,
+      score: insertResult.rows[0].score,
+      elapsedMs: insertResult.rows[0].elapsed_ms,
+      completedAt: insertResult.rows[0].completed_at,
+    })
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Failed to save Wend game score.',
+    })
   }
 })
 
